@@ -1,6 +1,6 @@
 # Agent Team Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 11 skills that cover the full lifecycle from intent discovery through implementation to diagnostic debugging.
+A complete development methodology built on parallel agent teams. 17 skills covering the full lifecycle: intent discovery, constraint research, implementation planning, adversarial review, diagnostic debugging, session management, and skill maintenance.
 
 ## The Pipeline
 
@@ -52,6 +52,22 @@ Use `--cascade` with `/persistent-issue` to auto-escalate through up to 3 teams 
 
 The router classifies the issue, tries the matched team first, and if unresolved, escalates to the next team in priority order.
 
+### Session Management (requires Obsidian)
+
+| Skill | Purpose |
+|-------|---------|
+| `/start-day` | Morning briefing: git pull, review session notes, check memory, scan learnings, triage ideas |
+| `/session-notes` | End-of-session documentation: completed work, key decisions, learnings, "left off" state |
+| `/insight` | Weekly metrics report: development summary, architecture changes, priorities, blocked items |
+| `/triage-ideas` | Process Obsidian Ideas.md inbox: classify, confirm with user, route to project roadmap |
+
+### Skill Maintenance
+
+| Skill | Purpose |
+|-------|---------|
+| `/skill-audit` | 5 automated checks: staleness, safety guards, cross-skill consistency, efficiency, step compliance |
+| `/skill-creator` | Create, test, and optimize new skills with structured eval framework |
+
 ## Installation
 
 ### Project-level (recommended)
@@ -70,12 +86,13 @@ cp -r skills/ ~/.claude/skills/
 
 ## Configuration
 
-These skills are designed to work with any codebase out of the box. Some skills reference project conventions that you may want to customize:
+These skills work with any codebase out of the box. Customize for your project:
 
 - **`/review-impl`**: The grading rubric weights (Functionality 40%, Design 25%, Data integrity 20%, Performance 15%) can be adjusted for your priorities
 - **`/write-plan`**: The "Done When" acceptance criteria template can be extended with project-specific assertion types
 - **`/grill-me`**: The 7 question branches cover most features; add domain-specific branches in the "Edge Cases" section
 - **`/cascade-orchestration`**: The Skill Integration Map is a template — populate it with your project's skill mappings
+- **Session skills** (`/start-day`, `/session-notes`, `/insight`, `/triage-ideas`): Require [Obsidian](https://obsidian.md) with CLI access. Set `{{vault_name}}` and `{{project}}` placeholders to match your vault structure. Auto-detects Obsidian binary on Windows/macOS/Linux
 
 ## Requirements
 
