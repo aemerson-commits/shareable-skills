@@ -1,0 +1,19 @@
+{
+  "name": "agent-team-skills",
+  "version": "1.0.0",
+  "description": "A complete development methodology for Claude Code — intent discovery, constraint research, implementation planning, adversarial review, and diagnostic escalation with parallel agent teams.",
+  "author": "aemerson-commits",
+  "skills": [
+    "skills/grill-me",
+    "skills/research-gate",
+    "skills/write-plan",
+    "skills/review-impl",
+    "skills/cascade-orchestration",
+    "skills/persistent-issue",
+    "skills/deep-root-cause",
+    "skills/full-stack-trace",
+    "skills/isolation-test",
+    "skills/temporal-forensics",
+    "skills/regression-bisect"
+  ]
+}
