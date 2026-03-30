@@ -1,6 +1,6 @@
 # Agent Team Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 17 skills covering the full lifecycle: intent discovery, constraint research, implementation planning, adversarial review, diagnostic debugging, session management, and skill maintenance.
+A complete development methodology built on parallel agent teams. 28 skills covering the full lifecycle: intent discovery, constraint research, implementation planning, adversarial review, diagnostic debugging, document generation, creative tools, session management, and skill maintenance.
 
 ## The Pipeline
 
@@ -28,6 +28,7 @@ When things go wrong:
 | `/write-plan` | Decompose into tasks with acceptance criteria ("Done When"). | Sequential |
 | `/review-impl` | Adversarial review with weighted grading (A/B/C/F), 3 code reviewers + Playwright visual verification. | 3 parallel + 1 visual |
 | `/cascade-orchestration` | 5 reusable agent team patterns: Fan-Out/Fan-In, Sequential Pipeline, Per-Project Propagation, Cascading Sub-Teams, Conditional Dispatch. | Reference (no agents) |
+| `/debug-collaborate` | Multi-agent collaborative debugging — parallel hypothesis generation and testing. | 4 parallel |
 
 ### Diagnostic Escalation
 
@@ -51,6 +52,26 @@ Use `--cascade` with `/persistent-issue` to auto-escalate through up to 3 teams 
 ```
 
 The router classifies the issue, tries the matched team first, and if unresolved, escalates to the next team in priority order.
+
+### Document & Data Generation
+
+| Skill | Purpose |
+|-------|---------|
+| `/pdf` | Full PDF toolkit — read, create, merge, split, OCR, watermark, encrypt, fill forms, extract |
+| `/docx` | Create, read, edit, manipulate Word documents (.docx) with TOC, letterhead, templates |
+| `/xlsx` | Read, create, edit, convert spreadsheet files (.xlsx, .xlsm, .csv, .tsv) |
+| `/internal-comms` | Write internal communications — status reports, newsletters, FAQs, incident reports |
+| `/mcp-builder` | Build MCP servers for LLM-service integration (Python FastMCP or Node/TypeScript) |
+
+### Creative Tools
+
+| Skill | Purpose |
+|-------|---------|
+| `/web-artifacts-builder` | Build elaborate multi-component claude.ai HTML artifacts with React, Tailwind, shadcn/ui |
+| `/algorithmic-art` | Generative art via p5.js with seeded randomness — flow fields, particle systems |
+| `/canvas-design` | Create visual art (.png, .pdf) — posters, designs, static artwork |
+| `/slack-gif-creator` | Create animated GIFs optimized for Slack with constraints and validation |
+| `/theme-factory` | Style artifacts with 10 pre-set themes or generate custom themes on-the-fly |
 
 ### Session Management (requires Obsidian)
 
@@ -93,6 +114,8 @@ These skills work with any codebase out of the box. Customize for your project:
 - **`/grill-me`**: The 7 question branches cover most features; add domain-specific branches in the "Edge Cases" section
 - **`/cascade-orchestration`**: The Skill Integration Map is a template — populate it with your project's skill mappings
 - **Session skills** (`/start-day`, `/session-notes`, `/insight`, `/triage-ideas`): Require [Obsidian](https://obsidian.md) with CLI access. Set `{{vault_name}}` and `{{project}}` placeholders to match your vault structure. Auto-detects Obsidian binary on Windows/macOS/Linux
+- **Document skills** (`/pdf`, `/docx`, `/xlsx`): Install required npm packages on first use (`pdf-lib`, `docx`, `exceljs`)
+- **Creative skills** (`/algorithmic-art`, `/canvas-design`): Generate standalone HTML files or use canvas APIs
 
 ## Requirements
 
