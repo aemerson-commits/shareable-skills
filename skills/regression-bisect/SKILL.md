@@ -58,9 +58,7 @@ Steps:
    - Removed or renamed export that another file depends on
    - Cache key pattern change that breaks cache reads
    - API response shape change that breaks frontend parsing
-4. Check if the commit modified shared/common code that affects multiple parts of the application:
-   - Shared utilities, configuration files, common components
-   - Any shared module change may have downstream effects across the entire project
+4. Check if the commit modified shared files that affect multiple projects
 
 Output: The specific side effect + which code path it breaks
 ```

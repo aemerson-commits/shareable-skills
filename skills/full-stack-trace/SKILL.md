@@ -27,14 +27,14 @@ Check the frontend layer for this issue.
 Evidence: [paste Evidence Document]
 
 Verify:
-1. Component receives correct props from parent (read component tree, check prop passing)
+1. Component receives correct props from parent (read root component prop passing)
 2. Component state is correct (check useState initial values, useEffect deps)
-3. Memoization isn't hiding stale data (check useMemo/useCallback/React.memo deps)
+3. Memoization isn't hiding stale data (check useMemo/useCallback deps)
 4. CSS isn't hiding/misplacing content (check display, visibility, overflow, z-index)
-5. localStorage/sessionStorage isn't serving stale saved state (check stored values against current defaults)
+5. localStorage isn't serving stale saved state
 6. Event handlers fire correctly (check onClick, onChange bindings)
 
-If using browser automation: take a screenshot and inspect the DOM for the specific element.
+If using Playwright: take a screenshot and inspect the DOM for the specific element.
 
 Output:
 - CLEAR: Frontend layer is correct, data arrives correctly but [specific observation]
@@ -48,12 +48,12 @@ Check the API layer. Only runs if Agent 1 reports CLEAR.
 Evidence: [paste Evidence Document + Agent 1 findings]
 
 Verify:
-1. Curl the endpoint directly (with appropriate auth headers if needed)
-2. Check response shape — is it JSON? correct fields? correct values? (not an HTML error page)
-3. Check caching layer — is the response being served from cache vs live data?
-4. Check request parameters — is the frontend sending the right query params/body?
-5. Compare environments — does the same endpoint return different results on dev vs prod?
-6. Check CORS headers — is the response being blocked or modified?
+1. Curl the endpoint directly (with auth headers if needed)
+2. Check response shape — is it JSON? correct fields? correct values?
+3. Check CORS headers — is the response being blocked or modified?
+4. Check if the endpoint is hitting cache vs live data (look for cache calls)
+5. Check request parameters — is the frontend sending the right query?
+6. Compare dev vs prod endpoint responses if relevant
 
 Output:
 - CLEAR: API returns correct data
@@ -67,11 +67,10 @@ Check the backend data layer. Only runs if Agent 2 reports CLEAR.
 Evidence: [paste Evidence Document + Agent 1-2 findings]
 
 Verify:
-1. Data source query — run the actual query and check the raw results
-2. Cache content — if a caching layer exists, compare cached data against source of truth
-3. Data transformations — check any mapping, normalization, or aggregation logic
-4. Database state — is the data correct at rest? Check for stale, missing, or malformed records
-5. Third-party API responses — if data comes from external services, check their responses directly
+1. Cache — is the cached data correct? Check TTL, check if stale
+2. Database — query the source directly, compare with cached data
+3. External API — if data comes from a third-party API, check the response
+4. Data transformations — check mapping logic, normalization functions
 
 Output:
 - CLEAR: Backend data is correct
@@ -85,12 +84,12 @@ Check infrastructure. Only runs if Agent 3 reports CLEAR.
 Evidence: [paste Evidence Document + Agent 1-3 findings]
 
 Verify:
-1. Secrets/environment variables — are all required env vars set in the running environment?
-2. Configuration files — do config files match expectations? (bindings, routes, permissions)
-3. Deploy state — is the latest code actually deployed? Compare git HEAD with what's running
-4. Background jobs/cron — are scheduled tasks registered and running on time?
-5. Auth tokens — are service tokens, API keys, or JWTs valid and not expired?
-6. DNS/networking — is the domain resolving correctly? Are upstream services reachable?
+1. Secrets — are all required secrets/env vars set?
+2. Bindings — are database/cache bindings configured correctly?
+3. Deploy state — is the latest code actually deployed? Compare git HEAD with deploy
+4. Cron triggers — are scheduled tasks registered and running?
+5. Auth config — are tokens/JWTs valid?
+6. DNS — is the domain resolving correctly?
 
 Output:
 - CLEAR: Infrastructure is correct (escalate — issue may be intermittent, try Team D)

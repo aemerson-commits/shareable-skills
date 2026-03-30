@@ -6,16 +6,12 @@ user_invocable: true
 
 # Weekly Insight Report — Obsidian Vault
 
-Generate a weekly insight report summarizing project metrics, development progress, and priorities.
+Generate a weekly insight report summarizing development metrics, progress, and priorities.
 
 ## Obsidian CLI
 
-**Binary**: Auto-detect based on platform:
-- Windows: `"/c/Users/{username}/AppData/Local/Programs/obsidian/Obsidian.exe"`
-- macOS: `/Applications/Obsidian.app/Contents/MacOS/Obsidian`
-- Linux: `obsidian` (if on PATH) or `flatpak run md.obsidian.Obsidian`
-
-**Active vault**: `{{vault_name}}` — detect from Obsidian config or ask user on first run.
+**Binary**: Auto-detect Obsidian installation path.
+**Active vault**: Set `{{vault_path}}` to your Obsidian vault location.
 
 All CLI commands output to stderr — always append `2>&1` and filter startup noise:
 
@@ -60,7 +56,7 @@ git diff --stat HEAD~{N}  # where N = commit count from above
 "$OBS" search:context query="Next Steps|Left Off|Still on backlog" path="{{project}}/Sessions" limit=20 2>&1 | grep -v "Loading\|out of date"
 ```
 
-**Also review:** `memory/` directory (repo) and project config docs (CLAUDE.md, README, etc.).
+**Also review:** `memory/MEMORY.md` (repo), CLAUDE.md RESUME section (repo), `{{project}}/Learnings/` (vault).
 
 ### 2. Generate Report
 
@@ -105,9 +101,9 @@ Template:
 
 ## Metrics / Health
 
-- Components modified: {count files changed, by area}
-- Services/workers status: {operational, degraded, or down}
-- Test coverage: {pass/fail counts if applicable}
+- Components: {count} views, {total lines}
+- Shared utilities: {function count}
+- Workers: {status}
 - Open vault tasks: {count from tasks todo}
 - Top tags: {from tags counts}
 

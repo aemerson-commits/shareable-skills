@@ -27,17 +27,18 @@ Test each suspected component independently.
 Evidence: [paste Evidence Document]
 
 For each component in the data path:
-1. Feed it known-good input -> does it produce correct output?
-2. Feed it the actual problematic input -> does it produce wrong output?
+1. Feed it known-good input → does it produce correct output?
+2. Feed it the actual problematic input → does it produce wrong output?
 3. If wrong: this component is one of the contributing factors
 
 Components to test (as applicable):
-- Database query (run the SQL/query directly)
-- API response (curl the endpoint)
-- Cache layer (read raw cached value)
-- Data transform (trace a specific item through mapping/formatting logic)
-- UI component (mock props, check render output)
+- API response (curl directly)
+- Cache content (read raw key)
+- Data transformation/mapping logic (trace specific item)
+- React component (mock props, check render)
 - CSS rules (inspect computed styles)
+- Backend endpoint (curl directly)
+- Database query (run the SQL/query)
 
 Output: List of components with PASS/FAIL + what specifically fails
 ```
@@ -50,18 +51,16 @@ Evidence: [paste Evidence Document]
 
 Steps:
 1. Identify the specific data item(s) that exhibit the issue
-2. Can it reproduce with just 1 record? (e.g., one specific ID or input)
+2. Can it reproduce with just 1 item? (e.g., one specific record)
 3. What's special about the failing items vs working items?
 4. Check: is it a data shape issue? (missing field, null value, unexpected type)
 5. Check: is it a data content issue? (special characters, long strings, edge case values)
 
 Common data-related triggers:
-- Records with missing or null required fields
-- Values containing special characters (quotes, dashes, unicode)
-- Duplicate IDs or conflicting unique constraints
-- Edge-case data types (empty strings vs null, 0 vs false, nested objects vs flat)
-- Date/time fields that are null, empty string, or in unexpected formats
-- IDs with format conflicts (separators that collide with delimiters)
+- Records with multiple related items that have different ID patterns
+- Items in unexpected states (completed but still showing as active)
+- Date fields that are null or empty string
+- IDs with special characters conflicting with internal format conventions
 
 Output: Minimal reproduction dataset + what makes failing items different
 ```
@@ -79,10 +78,10 @@ Compare:
 4. Does the SAME data produce different results on different environments?
 
 If environment-specific:
-- Compare environment variables between environments
-- Compare configuration files (are bindings, routes, or settings different?)
-- Compare deploy state (is the same git commit deployed to both?)
-- Compare cached data (same key, different values?)
+- Compare secrets/env vars between environments
+- Compare cached data: same key, different values?
+- Compare deploy state: same git commit deployed?
+- Compare config bindings
 
 Output: Environment matrix (dev/prod/local x pass/fail) + what differs
 ```

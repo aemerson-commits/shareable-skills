@@ -1,7 +1,7 @@
 ---
 name: skill-audit
 description: "Run a comprehensive health audit across all skills — checks staleness, safety guards, cross-skill consistency, context efficiency, and step compliance. Use when you want to verify skill quality, after bulk skill edits, or as a periodic maintenance check."
-user-invokable: true
+user-invocable: true
 ---
 
 # Skill Audit — Comprehensive Health Check
@@ -23,25 +23,25 @@ Run checks 1-4 in parallel via subagents. Check 5 requires the current session's
 Dispatch an Explore agent:
 
 ```
-Scan all .claude/skills/*/SKILL.md and .claude/skills/*/skill.md files.
+Scan all .claude/skills/*/SKILL.md files.
 For each skill, extract:
 - File paths referenced → verify they exist via Glob
-- Config IDs or identifiers referenced → verify against the project's source of truth config files
+- Board/resource IDs → verify against config files
 - Function/export names referenced → spot-check against actual source files
 
 Report ONLY stale references (files that don't exist, IDs not in config).
 ```
 
-**Pass criteria**: Zero stale file paths or config IDs.
+**Pass criteria**: Zero stale file paths or resource IDs.
 
 ### Check 2: Negative Output (Safety Guards)
 
 Dispatch an Explore agent:
 
 ```
-Read your project docs (CLAUDE.md, README, etc.) for known gotchas or warnings.
-For each gotcha, identify which skill(s) should warn about it.
-Then read those skills and check whether the warning is PRESENT or MISSING.
+Read project docs (CLAUDE.md "Known Gotchas" section). For each gotcha, identify which
+skill(s) should warn about it. Then read those skills and check whether the warning is
+PRESENT or MISSING.
 
 Report MISSING guards only.
 ```
@@ -53,11 +53,12 @@ Report MISSING guards only.
 Dispatch an Explore agent:
 
 ```
-Identify 3-5 cross-cutting topics in your project (e.g., authentication patterns,
-database connections, deployment procedures, API conventions, caching strategies).
+For cross-cutting topics used by multiple skills, read the relevant skills and check
+for contradictions:
 
-For each topic, read all skills that reference it and check for contradictions
-or incomplete coverage.
+- Shared patterns (auth, email, caching) — consistent guidance across skills?
+- Resource IDs — all reference config files, not hardcoded?
+- Deployment — skill lists match actual project structure?
 
 Report CONTRADICTIONS and INCOMPLETE coverage only.
 ```
@@ -85,7 +86,11 @@ done | sort -rn
 
 ### Check 5: Step Compliance (if applicable)
 
-If process skills were used in the CURRENT session, grade them against their documented steps. For each skill used this session, verify that every documented step was followed and no steps were skipped.
+If process skills were used in the CURRENT session, grade them against their documented steps:
+- **deploy**: Built first? From project dir? Post-deploy verify?
+- **session-notes**: All sections? Keywords? MEMORY.md updated? Roadmap updated?
+- **research-gate**: Constraints? Patterns? Gotchas? Unknowns? Alternatives table? User approval?
+- **triage-ideas**: Read inbox? Classify? Confirm? Route? Clear inbox?
 
 **Pass criteria**: All documented steps followed. Skipped steps are flagged.
 
@@ -113,7 +118,7 @@ If process skills were used in the CURRENT session, grade them against their doc
 ## Auto-Fix Policy
 
 - **Staleness**: Flag only — don't auto-fix (may need investigation)
-- **Safety guards**: Auto-add missing warnings from project docs gotchas
+- **Safety guards**: Auto-add missing warnings from docs gotchas
 - **Consistency**: Flag contradictions — ask user which version is correct
 - **Efficiency**: Flag only — restructuring is manual
 - **Step compliance**: Flag only — behavioral, not a skill content issue

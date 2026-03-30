@@ -1,6 +1,6 @@
 # Agent Team Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 28 skills covering the full lifecycle: intent discovery, constraint research, implementation planning, adversarial review, diagnostic debugging, document generation, creative tools, session management, and skill maintenance.
+A complete development methodology built on parallel agent teams. 41 skills covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, testing, deployment, document generation, creative tools, session management, and skill maintenance.
 
 ## The Pipeline
 
@@ -29,6 +29,29 @@ When things go wrong:
 | `/review-impl` | Adversarial review with weighted grading (A/B/C/F), 3 code reviewers + Playwright visual verification. | 3 parallel + 1 visual |
 | `/cascade-orchestration` | 5 reusable agent team patterns: Fan-Out/Fan-In, Sequential Pipeline, Per-Project Propagation, Cascading Sub-Teams, Conditional Dispatch. | Reference (no agents) |
 | `/debug-collaborate` | Multi-agent collaborative debugging — parallel hypothesis generation and testing. | 4 parallel |
+
+### Build Orchestration
+
+| Skill | Purpose | Agents |
+|-------|---------|--------|
+| `/full-stack-build` | Orchestrate agent teams to build features spanning frontend + backend — API design, DB migrations, React components, integration wiring, and verification. | 2 designers + 2 builders + 4 verifiers |
+| `/propagate-feature` | Replicate features across projects with independent codebases — diff, adapt, apply. | 2 differs + 1 propagator + 2 verifiers |
+| `/worker-build` | Factory for building Cloudflare Workers — email reporters, cron jobs, API monitors. | 3 builders + 2 verifiers |
+| `/deploy-all` | Parallel deploy all changed projects — detects changes, builds, deploys, watches CI, verifies live URLs. | Orchestrator |
+| `/worktree-guard` | Safe worktree merge — diffs each changed file against dev HEAD before copying, flags conflicts. | Single agent |
+
+### Quality & Verification
+
+| Skill | Purpose | Agents |
+|-------|---------|--------|
+| `/verify-complete` | Verify feature completion with evidence — greps code, runs build, takes screenshots. | Single agent |
+| `/pre-merge-review` | Comprehensive pre-merge review — security pentesting, performance, scalability, UX consistency, code hardening. | 5 domains x 1-3 sub-agents (up to 12) |
+| `/schema-check` | Verify DB schema, KV keys, and env bindings before writing queries or endpoints. | Single agent |
+| `/env-audit` | Audit environment variables across all projects — detect missing secrets, compare code refs against deployed config. | 4 parallel scanners |
+| `/audit-components` | Audit component health — verify imports, props, shared utility consistency across all projects. | N project auditors + 2 cross-project |
+| `/webapp-testing` | Playwright toolkit for testing web apps — CF Access auth, route intercepts, screenshots. | Single agent |
+| `/data-reconciliation` | Trace data through pipeline layers to find where values diverge. For stale/wrong data debugging. | 4 layer samplers |
+| `/frontend-design` | UI/UX design patterns, color tokens, and component conventions. | Reference (no agents) |
 
 ### Diagnostic Escalation
 
@@ -113,7 +136,12 @@ These skills work with any codebase out of the box. Customize for your project:
 - **`/write-plan`**: The "Done When" acceptance criteria template can be extended with project-specific assertion types
 - **`/grill-me`**: The 7 question branches cover most features; add domain-specific branches in the "Edge Cases" section
 - **`/cascade-orchestration`**: The Skill Integration Map is a template — populate it with your project's skill mappings
-- **Session skills** (`/start-day`, `/session-notes`, `/insight`, `/triage-ideas`): Require [Obsidian](https://obsidian.md) with CLI access. Set `{{vault_name}}` and `{{project}}` placeholders to match your vault structure. Auto-detects Obsidian binary on Windows/macOS/Linux
+- **`/full-stack-build`**: Update `references/api-boilerplate.md` and `references/design-review-checklist.md` with your project's patterns
+- **`/frontend-design`**: Replace color tokens and component patterns with your project's design system
+- **`/deploy-all`**: Configure the project table with your Cloudflare Pages project names and CI workflows
+- **`/env-audit`**: Customize the context table with your project's runtime environments
+- **`/schema-check`**: Update the KV key patterns and DB table list with your project's schema
+- **Session skills** (`/start-day`, `/session-notes`, `/insight`, `/triage-ideas`): Require [Obsidian](https://obsidian.md) with CLI access. Set `{{vault_path}}` and `{{project}}` placeholders to match your vault structure. Auto-detects Obsidian binary on Windows/macOS/Linux
 - **Document skills** (`/pdf`, `/docx`, `/xlsx`): Install required npm packages on first use (`pdf-lib`, `docx`, `exceljs`)
 - **Creative skills** (`/algorithmic-art`, `/canvas-design`): Generate standalone HTML files or use canvas APIs
 

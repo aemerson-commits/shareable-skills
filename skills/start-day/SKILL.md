@@ -10,16 +10,10 @@ Run this at the start of every session when the user says "good morning", "let's
 
 ## Obsidian CLI
 
-Auto-detect Obsidian binary location:
+**Auto-detect**: Set `OBS` var based on which Obsidian binary exists:
 ```bash
-OBS=""
-for p in "/c/Program Files/Obsidian/Obsidian.exe" \
-         "/c/Users/$USERNAME/AppData/Local/Programs/obsidian/Obsidian.exe" \
-         "/Applications/Obsidian.app/Contents/MacOS/Obsidian" \
-         "$(which obsidian 2>/dev/null)"; do
-  [ -f "$p" ] && OBS="$p" && break
-done
-[ -z "$OBS" ] && echo "Obsidian not found — install or set OBS manually"
+OBS="/c/Program Files/Obsidian/Obsidian.exe"
+[ ! -f "$OBS" ] && OBS="/c/Users/$USER/AppData/Local/Programs/obsidian/Obsidian.exe"
 ```
 
 All CLI commands: append `2>&1 | grep -v "Loading\|out of date"`
@@ -36,15 +30,9 @@ git pull
 
 Note the files changed and summarize what came in (new features, fixes, docs, etc.).
 
-### Step 2 — Semantic Index Update (background, parallel)
+### Step 2 — Re-index (background, parallel)
 
-If semantic search is configured (e.g., QMD, embeddings), update the index in the background — don't block on it:
-```bash
-# Example for QMD:
-npx qmd update && npx qmd embed
-```
-
-If no semantic search is configured, skip this step.
+Run any project-specific re-indexing in background — don't wait for it.
 
 ### Step 3 — Review Recent Session Notes (parallel, use Agent)
 
@@ -62,11 +50,11 @@ Also check if yesterday's session note exists — if not, flag it (session notes
 ### Step 4 — Check Memory State (parallel, use Agent)
 
 Read and summarize:
-1. `memory/MEMORY.md` Active Alerts section — list all active warnings
-2. Any working-state or crash-buffer files in `memory/` — interrupted work?
-3. Any deferred/promise files in `memory/` — unblocked items?
+1. `memory/promises.md` — any unblocked deferred items?
+2. `memory/working-state.md` — any crash buffer / interrupted work?
+3. `memory/MEMORY.md` Active Alerts section — list all active warnings
 
-If specific memory files don't exist, that's fine — report clean state.
+If `promises.md` or `working-state.md` don't exist, that's fine — report clean state.
 
 ### Step 5 — Check Ideas Inbox
 
@@ -90,7 +78,12 @@ Only mention if there are recent additions worth calling out (new gotchas releva
 
 ### Step 7 — Verify Pending Items
 
-Check any pending infrastructure items from MEMORY.md alerts. Verify items marked "Pending" in Active Work sections are still accurate. Report verified items and clear resolved alerts from MEMORY.md.
+Check any pending infrastructure items from MEMORY.md alerts. For example:
+- Secrets that should be set
+- Services that should be running
+- Anything marked "Pending" in MEMORY.md Active Work sections
+
+Report verified items and clear resolved alerts from MEMORY.md.
 
 ## Output Format
 
@@ -106,7 +99,6 @@ Good morning! Here's your daily briefing:
 - alert 1
 - alert 2
 **Ideas inbox**: X items / clear
-**Skill health**: Last audit {date} — {pass/due for audit}. Top 3 used skills last 7 days: X, Y, Z
 **Recent gotchas**: Any new entries worth noting
 **Pending items**: Verified / needs attention
 

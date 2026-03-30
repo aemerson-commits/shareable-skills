@@ -35,10 +35,10 @@ Check these patterns in the affected code:
    - Check if a slow response overwrites a fast one
 3. **State updates during unmount**: Is a component setting state after unmounting?
    - Check for missing cleanup in useEffect return
-4. **Read-after-write consistency**: Is code reading data immediately after writing?
-   - Eventually consistent stores (caches, replicated DBs) may return stale data on immediate read
-5. **Resource contention**: Are concurrent operations exhausting a shared resource?
-   - Rate limits, connection pools, API quotas, mutex/lock contention
+4. **Cache read-after-write**: Is code reading cache immediately after writing?
+   - Eventually consistent stores may return stale data after immediate writes
+5. **API rate limits**: Are concurrent mutations exhausting budget?
+   - Check for parallel mutations without rate limiting
 
 Output: Specific race condition with timing diagram showing the failure path
 ```
@@ -50,20 +50,18 @@ Search for stale data, expired caches, and closure captures.
 Evidence: [paste Evidence Document]
 
 Check:
-1. **Cache TTL**: What are your cache TTLs? Is the data stale?
-   - Identify all caching layers (server cache, CDN, browser, application-level)
-   - Is the issue that data is correct at the source but stale in cache?
-2. **localStorage/sessionStorage**: Is the app reading old browser storage?
-   - Saved preferences, column settings, toggle states, filter values
-   - Cross-reference stored values against current application defaults
+1. **Cache TTL**: Is the cache TTL too long? Too short?
+   - Is the issue that data is correct in source but stale in cache?
+2. **localStorage**: Is the app reading old localStorage data?
+   - Column settings, tab preferences, toggles
+   - Cross-reference saved values against current defaults
 3. **React closures**: Is a callback capturing stale state?
    - Check useCallback deps — missing deps means stale closure
    - Check event handlers defined inside render without useCallback
-   - Check deps arrays on useMemo and useEffect
-4. **Sync lag**: How often does the sync/background job run? Is the user expecting real-time updates from a batch process?
-   - Identify the refresh interval and compare against user expectations
-5. **Cache format mismatch**: Is code reading compressed/encoded cache without the proper decoder?
-   - Check if cached data is gzipped, base64-encoded, or serialized — reader must match writer
+4. **Sync lag**: Do background sync processes run at intervals?
+   - Is the user expecting immediate updates that won't appear until next sync?
+5. **Cache format mismatch**: Is code reading cache without proper deserialization?
+   - Compressed cache keys read without decompression return garbage
 6. **Browser cache**: Is the browser serving a stale JavaScript bundle?
    - Check if content hashing is working (filenames should have hashes)
 
@@ -77,18 +75,17 @@ Analyze timing correlations.
 Evidence: [paste Evidence Document]
 
 Check:
-1. **Cron/scheduled job timing**: List your scheduled jobs and their intervals.
-   Does the issue correlate with when a job runs (or fails to run)?
-   Check for timezone issues (UTC vs local time, DST transitions)
+1. **Cron timing**: Does the issue correlate with scheduled task schedules?
+   - Check all cron intervals and their UTC offsets
+   - Account for DST changes (UTC-only schedules shift relative to local time)
 2. **Deploy timing**: Did the issue appear right after a deploy?
-   - Check if a config change or secret update caused a side effect (e.g., unregistering a scheduled task)
-   - Check if the deployed artifact is stale (built from wrong branch or directory)
-3. **Cache expiry window**: Does the issue appear at regular intervals matching a cache TTL?
-   - Map out all TTLs in the system and see if the recurrence pattern matches any of them
-4. **Session timing**: Does it happen after the user is idle?
-   - Auth token expiry (JWT, session cookie, refresh token)
-   - WebSocket disconnects after idle timeout
-   - Background tab throttling by the browser
+   - Secret changes can unregister cron triggers in some platforms
+   - Build artifacts might be stale (deployed from wrong directory?)
+3. **Cache expiry window**: Does the issue appear at specific intervals?
+   - Map intervals to known cache TTLs and sync frequencies
+4. **User session timing**: Does it happen after being idle?
+   - Auth token expiry
+   - localStorage TTL checks
 
 Output: Timing pattern identified + correlation with specific system event
 ```

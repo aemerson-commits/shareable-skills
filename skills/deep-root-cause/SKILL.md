@@ -28,9 +28,9 @@ Evidence: [paste Evidence Document]
 
 Steps:
 1. Identify the exact user action or trigger that causes the symptom
-2. If it's a UI issue: write Playwright/browser automation steps to reproduce
+2. If it's a UI issue: write Playwright steps to reproduce (see /webapp-testing)
 3. If it's an API issue: write the exact curl command that demonstrates it
-4. If it's a data issue: identify the specific record or input that exhibits the problem
+4. If it's a data issue: identify the specific record/order/item that exhibits the problem
 5. Verify the reproduction — run it and confirm the symptom appears
 
 Output: Exact reproduction steps + confirmation that symptom is reproducible
@@ -43,10 +43,10 @@ Your job is to trace the data from source to symptom, finding where actual diver
 Evidence: [paste Evidence Document]
 
 Trace path (check EACH step):
-1. **Source**: Where does the data originate? (database query, external API, cache, file, user input)
-2. **Transform**: What transformations happen? (data mapping, formatting, normalization, aggregation)
-3. **Transport**: How does it reach the consumer? (server route, middleware, proxy, message queue)
-4. **Render**: How is it displayed or used? (UI component, template, report output, downstream service)
+1. **Source**: Where does the data originate? (database, API, cache, user input)
+2. **Transform**: What transformations happen? (mapping, normalization, formatting)
+3. **Transport**: How does it reach the frontend? (API endpoint, proxy, direct fetch)
+4. **Render**: How is it displayed? (component, props, state, CSS)
 
 For each step:
 - Read the actual code
@@ -63,16 +63,16 @@ Your job is to list and verify every assumption the prior fix relied on.
 Evidence: [paste Evidence Document]
 
 For each prior fix attempt:
-1. What assumption was the fix based on? (e.g., "the data is stale in the cache")
+1. What assumption was the fix based on? (e.g., "the data is stale in cache")
 2. Is that assumption actually true? VERIFY by reading the code, not by reasoning
 3. What other explanations could produce the same symptom?
 
 Common false assumptions:
-- "The data comes from the database" — it might be served from a cache layer (check cache TTL and invalidation)
-- "The endpoint returns fresh data" — it might be cached at the server, CDN, or browser level
-- "The component re-renders" — it might be memoized (check useMemo/useCallback/React.memo deps)
-- "The fix was deployed" — check git log + actual deploy state; the running code may not match HEAD
-- "The environment variables are set" — they may differ between environments or be missing entirely
+- "The data comes from the API" — it might come from a cache (check TTL)
+- "The endpoint returns fresh data" — it might be cached (check cache layer)
+- "The component re-renders" — it might be memoized (check useMemo deps)
+- "The deploy updated this" — the build might be stale (check deploy source)
+- "The fix was deployed" — was it actually pushed and deployed? (check git log + deploy URL)
 
 Output: List of assumptions with VERIFIED/FALSE status + alternative explanations
 ```

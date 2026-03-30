@@ -5,7 +5,7 @@ description: Adversarial implementation review. Dispatches independent reviewer 
 
 # Review Implementation
 
-Dispatch independent reviewer agents that read the actual code — not the implementer's summary. This catches the class of bugs where "it works in my head" doesn't match what was actually written (auth bypass, data accumulation bugs, etc.).
+Dispatch independent reviewer agents that read the actual code — not the implementer's summary. This catches the class of bugs where "it works in my head" doesn't match what was actually written.
 
 ## Arguments
 
@@ -82,15 +82,15 @@ Review checklist:
    - Premature optimization
 
 3. SECURITY GAPS: For any new endpoints or data handling:
-   - Auth checks present? (rate limiting, token validation, auth middleware)
+   - Auth checks present?
    - Input validation on user data?
-   - XSS prevention (output encoding/escaping for HTML output)?
-   - CORS headers from your shared utilities (not duplicated locally)?
+   - XSS prevention for HTML output?
+   - CORS headers from shared utilities (not duplicated locally)?
 
 4. DATA INTEGRITY: For any data transformations:
-   - Are cache keys using correct patterns? (check known caching gotchas)
-   - Are external service IDs from shared config (not hardcoded)?
-   - Are dates using project date/time formatting utilities?
+   - Are cache keys using correct patterns?
+   - Are IDs from config (not hardcoded)?
+   - Are dates formatted consistently?
 
 Output format:
 ## Spec Compliance: PASS / ISSUES FOUND
@@ -118,7 +118,7 @@ Review checklist:
    - Follows existing codebase patterns? (check neighboring files)
    - Uses shared utilities?
    - React hooks used correctly? (no nested components, stable useMemo deps)
-   - CSS follows project theme conventions?
+   - CSS follows project conventions?
 
 2. ERROR HANDLING:
    - API endpoints return proper error responses (not unhandled exceptions)?
@@ -154,18 +154,18 @@ Changed files: [from Phase 1 Diff Analyzer]
 
 Review checklist:
 1. AUTH COVERAGE:
-   - Every new API endpoint has auth middleware or equivalent
-   - Permission checks applied where needed
-   - No raw auth identity header reads (use the auth helper function)
+   - Every new API endpoint has auth checks
+   - RBAC permissions checked where needed
+   - No raw auth header reads (use helper functions)
 
 2. INPUT VALIDATION:
    - All user-controlled parameters validated
    - SQL queries use parameterized queries (no string concatenation)
-   - HTML output uses output encoding/escaping for user data
+   - HTML output escapes user data
 
 3. SECRETS & CORS:
    - No hardcoded secrets, API keys, or tokens
-   - CORS headers from shared auth utilities (not duplicated)
+   - CORS headers from shared utilities (not duplicated)
    - Error responses don't leak internal details
 
 Output format:
@@ -198,20 +198,15 @@ You are verifying the visual implementation of recently changed UI components.
 
 Changed files: [from Phase 1 — filter to .jsx and .css files only]
 Project: [determine from file paths]
-Dev URL: [from project config or environment]
-
-Prerequisites:
-- Changes must be deployed to dev first (build + deploy)
-- Obtain auth credentials for automated testing from project config
+Dev URL: [from project config]
 
 Steps:
-1. Launch headless Playwright (Node.js ESM pattern)
-2. Navigate to dev URL with appropriate auth headers
-3. Use Playwright auth intercept pattern for authentication
-4. Navigate to new/modified view
-5. Take screenshots: default state, with data, mobile viewport (375x812)
-6. Compare against existing views: color tokens, spacing, theme, responsive
-7. If acceptance criteria exist (from plan "Done When"): verify each one
+1. Launch headless Playwright
+2. Navigate to dev URL with auth headers
+3. Navigate to new/modified view
+4. Take screenshots: default state, with data, mobile viewport (375x812)
+5. Compare against existing views: color tokens, spacing, theme, responsive
+6. If acceptance criteria exist (from /write-plan "Done When"): verify each one
 
 Output:
 ## Visual Verification: PASS / ISSUES FOUND
@@ -219,12 +214,43 @@ Screenshots: [list of paths]
 | Check | Status | Notes |
 |-------|--------|-------|
 | Color tokens | PASS/FAIL | |
-| Theme consistency | PASS/FAIL | |
+| Theme | PASS/FAIL | |
 | Mobile responsive | PASS/FAIL | |
 | Acceptance criteria | PASS/FAIL | |
 ```
 
 Note: Requires changes deployed to dev. If not yet deployed, skip and add "deploy + visual verify" to Next Steps.
+
+### Phase 4b: Consumer Contract Verification (if data shape changed)
+
+Skip if changes don't affect API response shapes or data transformations.
+
+Dispatch 1 agent (model: "opus"):
+
+**Agent E — Consumer Contract Reviewer**
+```
+You are verifying that new/modified API responses match what frontend
+components actually read.
+
+Changed files: [from Phase 1 — filter to API files]
+
+Steps:
+1. For each modified API endpoint, identify the response shape (field names, types, nesting)
+2. Grep ALL frontend .jsx files that call this endpoint
+3. For each consumer, extract the exact field paths read:
+   - Direct property access: `data.fieldName`
+   - Destructuring: `const { field1, field2 } = item`
+   - Map/filter callbacks: `.filter(s => s.status === 'active')`
+   - Conditional checks: `if (item.field && item.otherField)`
+4. Compare: does every consumer field exist in the API response?
+5. Check: are field NAMES identical?
+6. Check: are field TYPES compatible? (string vs number, null vs undefined)
+
+Output:
+## Consumer Contract: PASS / MISMATCHES FOUND
+| Consumer File | Field Read | API Field | Match? |
+|--------------|------------|-----------|--------|
+```
 
 ### Phase 5: Report
 
@@ -245,6 +271,7 @@ Present a concise summary:
 **Code Quality:** PASS / X issues (Y fixed)
 **Security:** PASS / X issues (Y fixed)
 **Visual:** PASS / X issues (deployed: yes/no)
+**Consumer Contracts:** PASS / X mismatches (if data shape changed)
 
 ### Issues Found & Resolved
 - [brief description of what was caught and fixed]

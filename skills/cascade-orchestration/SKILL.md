@@ -13,14 +13,14 @@ Use when N independent tasks produce results that need synthesis.
 
 ```
 Main Agent
-|-- dispatch N agents in parallel (fan-out)
-|   |-- Agent 1 -> result 1
-|   |-- Agent 2 -> result 2
-|   +-- Agent N -> result N
-+-- synthesize all results (fan-in)
+├── dispatch N agents in parallel (fan-out)
+│   ├── Agent 1 → result 1
+│   ├── Agent 2 → result 2
+│   └── Agent N → result N
+└── synthesize all results (fan-in)
 ```
 
-**Use cases:** Component audits, environment audits, code reviews, compliance checks.
+**Used by:** /audit-components, /env-audit, /pre-merge-review, /skill-audit
 
 **Implementation:**
 - Each agent gets a focused scope (one project, one domain, one file set)
@@ -34,15 +34,15 @@ Use when each stage depends on the previous stage's output.
 
 ```
 Stage 1 (parallel research agents)
-    | results
+    ↓ results
 Stage 2 (parallel implementation agents)
-    | code changes
+    ↓ code changes
 Stage 3 (parallel review agents)
-    | findings
+    ↓ findings
 Stage 4 (synthesis + report)
 ```
 
-**Use cases:** /research-gate -> /write-plan -> build -> /review-impl
+**Used by:** /research-gate → /write-plan → build → /review-impl
 
 **Implementation:**
 - Each stage can internally use Fan-Out/Fan-In
@@ -56,13 +56,13 @@ Use when a shared change must be verified/applied across all projects.
 
 ```
 Trigger: shared/ file changed
-|-- Agent: Project A Verifier -- check imports, build, test
-|-- Agent: Project B Verifier -- check imports, build, test
-|-- Agent: Project C Verifier -- check imports, build, test
-+-- Agent: Project D Verifier -- check imports, build, test
+├── Agent: Project A Verifier — check imports, build, test
+├── Agent: Project B Verifier — check imports, build, test
+├── Agent: Project C Verifier — check imports, build, test
+└── Agent: Project D Verifier — check imports, build, test
 ```
 
-**Use cases:** Shared utility changes, cross-project deployments.
+**Used by:** /audit-components (after shared util changes), /deploy-all
 
 **Implementation:**
 - Each agent gets the same verification checklist
@@ -76,18 +76,18 @@ Use when a domain agent needs deeper analysis than one agent can provide.
 
 ```
 Domain Agent (e.g., Security Review)
-|-- Sub-agent: Profile A (unauthenticated attacker)
-|-- Sub-agent: Profile B (compromised user)
-+-- Sub-agent: Profile C (compromised admin)
+├── Sub-agent: Profile A (unauthenticated attacker)
+├── Sub-agent: Profile B (compromised user)
+└── Sub-agent: Profile C (compromised admin)
 ```
 
-**Use cases:** Security reviews, performance analysis, multi-persona UX review.
+**Used by:** /pre-merge-review (security, performance, UX sub-agents)
 
 **Implementation:**
 - Parent agent defines sub-agent scope and shares relevant context
 - Sub-agents report to parent, not directly to main
 - Parent synthesizes sub-agent results before reporting to main
-- Max depth: 2 levels (main -> domain -> sub-agent). Never go deeper.
+- Max depth: 2 levels (main → domain → sub-agent). Never go deeper.
 
 ## Pattern 5: Conditional Dispatch
 
@@ -95,13 +95,13 @@ Use when some agents are only needed based on what changed.
 
 ```
 Main Agent reads git diff
-|-- If src/frontend/ changed  -> dispatch Frontend agents
-|-- If shared/ changed        -> dispatch ALL project agents
-|-- If src/workers/ changed   -> dispatch Worker agents
-+-- If src/api/ changed       -> dispatch API agents
+├── If project-a/ changed → dispatch Project A agents
+├── If shared/ changed → dispatch ALL project agents
+├── If workers/ changed → dispatch Worker agents
+└── If backend/ changed → dispatch Backend agent
 ```
 
-**Use cases:** Selective deploys, conditional session steps.
+**Used by:** /deploy-all (selective), /session-notes (conditional steps)
 
 **Implementation:**
 - Main agent determines scope from git diff or user input
@@ -119,19 +119,29 @@ Main Agent reads git diff
 | Sequential when parallel is possible | Wastes time | If tasks have no data dependency, parallelize |
 | Parallelizing tiny tasks | Agent overhead > task time | Only parallelize tasks that take 30s+ each |
 
-## Skill Integration Map (customize for your project)
+## Skill Integration Map
 
 | Workflow | Pattern | Agents |
 |----------|---------|--------|
-| Intent discovery | Sequential | /grill-me conversation |
-| Constraint research | Fan-Out/Fan-In | 4 parallel research agents |
-| Implementation planning | Sequential Pipeline | Research -> decompose -> task list |
-| Code review | Cascading Sub-Teams | 3+ reviewers + visual verification |
-| Persistent bug diagnosis | Sequential + Conditional | Triage -> dispatch Team A-E |
-| Component audit | Per-Project Propagation | N project auditors + cross-project auditors |
-| Environment audit | Fan-Out/Fan-In | N context scanners -> cross-reference synthesis |
-| Pre-merge review | Cascading Sub-Teams | N domains x 1-3 sub-agents each |
-| Selective deploy | Per-Project Propagation + Conditional | Affected project agents only |
-| Full-stack build | Sequential Pipeline + Fan-Out/Fan-In | Designers -> builders (worktree) -> verifiers |
-| Root cause analysis | Fan-Out/Fan-In | Reproducer, Data Flow Tracer, Assumption Auditor |
-| Regression hunting | Sequential Pipeline | Bisector -> Side Effect Analyzer -> Rollback Verifier |
+| `/start-day` | Fan-Out/Fan-In | 4 parallel: git pull, index, session review, memory check |
+| `/research-gate` | Fan-Out/Fan-In | 4 parallel research agents → synthesis |
+| `/audit-components` | Per-Project Propagation | N project auditors + cross-project auditors |
+| `/env-audit` | Fan-Out/Fan-In | N context scanners → cross-reference synthesis |
+| `/review-impl` | Sequential Pipeline | 3 context agents → 3 reviewers → synthesis |
+| `/pre-merge-review` | Cascading Sub-Teams | 5 domains x 1-3 sub-agents each (up to 12 total) |
+| `/deploy-all` | Per-Project Propagation + Conditional | N Pages agents, then Worker agents |
+| `/session-notes` | Fan-Out/Fan-In + Conditional | 5 parallel: vault, docs, help, memory, tracker |
+| `/debug-collaborate` | Fan-Out/Fan-In | 3-4 hypothesis investigators → synthesis |
+| `/write-plan` | Sequential Pipeline | Research → decompose → task list with file paths |
+| `/skill-audit` | Fan-Out/Fan-In | 4 parallel checks → compliance check → report |
+| `/persistent-issue` | Sequential Pipeline + Conditional | Triage → dispatch Team A-E → auto-escalate (cascade mode) |
+| `/deep-root-cause` | Fan-Out/Fan-In | 3 agents: Reproducer, Data Flow Tracer, Assumption Auditor |
+| `/full-stack-trace` | Sequential Pipeline | 4 agents: Frontend → API → Backend → Infrastructure |
+| `/isolation-test` | Fan-Out/Fan-In + Conditional | 3 agents: Component Isolator, Data Minimizer, Environment Comparator |
+| `/temporal-forensics` | Fan-Out/Fan-In | 3 agents: Race Condition Hunter, Stale State Detective, Timing Profiler |
+| `/regression-bisect` | Sequential Pipeline | 3 agents: Git Bisector, Side Effect Analyzer, Rollback Verifier |
+| `/full-stack-build` | Sequential Pipeline + Fan-Out/Fan-In | 2 designers → 2 builders (worktree) → 4 verifiers |
+| `/worker-build` | Fan-Out/Fan-In | 3 builders (worktree) → 2 verifiers |
+| `/propagate-feature` | Sequential Pipeline + Fan-Out/Fan-In | 2 differs → adapt plan → 1 propagator (worktree) → 2 verifiers |
+| `/data-reconciliation` | Fan-Out/Fan-In | 4 layer samplers → reconciliation matrix |
+| `/grill-me` | Sequential (conversation) | Intent interrogation → Intent Summary for /research-gate |

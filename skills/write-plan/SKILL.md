@@ -32,7 +32,7 @@ Create `docs/plans/YYYY-MM-DD-{feature-slug}.md`:
 - [ ] Build passes all affected projects
 - [ ] No lint errors
 
-These criteria are verified by `/review-impl` and visual verification.
+These criteria are verified by `/review-impl` Agent A (Spec Compliance) and Phase 4 (Visual Verification).
 
 **Approach:** [2-3 sentences — the chosen approach from research gate]
 **Constraints:** [Key constraints that shaped this approach]
@@ -41,8 +41,8 @@ These criteria are verified by `/review-impl` and visual verification.
 
 | Action | File | Lines |
 |--------|------|-------|
-| Create | `{{project}}/src/components/NewView.jsx` | — |
-| Modify | `{{project}}/src/App.jsx` | 45-60 |
+| Create | `project/src/components/NewView.jsx` | — |
+| Modify | `project/src/App.jsx` | 45-60 |
 | Modify | `shared/utils.js` | append |
 
 ## Task 1: [Component/Feature Name]
@@ -57,7 +57,7 @@ These criteria are verified by `/review-impl` and visual verification.
 - [ ] Step 2: [Next action]
 - [ ] Verify: [Exact verification command or check]
   ```bash
-  cd {{project}} && npm run build  # must pass
+  cd project && npm run build  # must pass
   ```
 
 ## Task 2: [Next Component]
@@ -65,17 +65,17 @@ These criteria are verified by `/review-impl` and visual verification.
 
 ## Task N: Final Verification
 
-- [ ] Build all affected projects: `cd {{project}} && npm run build`
-- [ ] Lint passes: `cd {{project}} && npm run lint`
+- [ ] Build all affected projects
+- [ ] Lint passes
 - [ ] Manual smoke test: [what to check in browser]
-- [ ] Automated verification: [if applicable]
+- [ ] Playwright verification: [if applicable]
 
 ## Parallel Execution Map
 
 [Which tasks can run in parallel vs. which have dependencies]
 
-Task 1 --> Task 3 --> Task 5 (verify)
-Task 2 --> Task 4 --/
+Task 1 ──→ Task 3 ──→ Task 5 (verify)
+Task 2 ──→ Task 4 ──╱
 ```
 
 ## Plan Quality Checklist
@@ -114,9 +114,9 @@ Execute tasks sequentially with TodoWrite tracking. Mark each complete as you go
 
 ### Mode C: Hybrid (most common)
 
-- Independent infrastructure tasks (API endpoints, utilities) -> parallel subagents
-- Dependent UI integration -> sequential after infrastructure is ready
-- Final verification -> always sequential, always last
+- Independent infrastructure tasks (API endpoints, utilities) → parallel subagents
+- Dependent UI integration → sequential after infrastructure is ready
+- Final verification → always sequential, always last
 
 ## Plan Maintenance
 

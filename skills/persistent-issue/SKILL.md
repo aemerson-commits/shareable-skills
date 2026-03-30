@@ -27,7 +27,7 @@ Dispatch one triage agent to classify the issue:
    - Fix attempts made (code changes, deploys, config changes)
    - How the symptom changed (or didn't) after each attempt
 2. Run `git log --oneline -15` for recent commits related to the area
-3. Check prior debugging findings and project troubleshooting knowledge base for previous encounters with this issue
+3. Check memory/ for prior encounters with this issue
 4. Classify into exactly ONE primary category:
 
 | Category | Signal | Route To |
@@ -82,10 +82,10 @@ After the diagnostic team identifies the root cause:
 ## Anti-Patterns
 - NEVER re-try the same approach that already failed — the Evidence Document tracks prior attempts
 - NEVER skip triage — even if you think you know the category, verify against evidence
-- NEVER diagnose AND fix in the same agent — separate concerns
+- NEVER diagnose AND fix in the same agent — separate concerns (Pattern 2 from /cascade-orchestration)
 - If all 3 cascade teams fail, STOP and present findings to user — don't loop
 
 ## Integration
-- Reads from: prior debugging findings (if previously run in this session)
-- Feeds into: project troubleshooting knowledge base (add new patterns discovered)
-- Updates: session notes or memory with persistent issue patterns for future sessions
+- Reads from: `/debug-collaborate` findings (if previously run)
+- Feeds into: project-specific troubleshooting skill (add new patterns discovered)
+- Updates: memory/ with persistent issue patterns for future sessions
