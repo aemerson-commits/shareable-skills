@@ -1,6 +1,6 @@
 # Agent Team Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 41 skills covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, testing, deployment, document generation, creative tools, session management, and skill maintenance.
+A complete development methodology built on parallel agent teams. 43 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
 ## The Pipeline
 
@@ -95,6 +95,7 @@ The router classifies the issue, tries the matched team first, and if unresolved
 | `/canvas-design` | Create visual art (.png, .pdf) — posters, designs, static artwork |
 | `/slack-gif-creator` | Create animated GIFs optimized for Slack with constraints and validation |
 | `/theme-factory` | Style artifacts with 10 pre-set themes or generate custom themes on-the-fly |
+| `/html-slides` | One-shot presentation slides from a single prompt — polished, interactive, self-contained HTML |
 
 ### Session Management (requires Obsidian)
 
@@ -105,27 +106,97 @@ The router classifies the issue, tries the matched team first, and if unresolved
 | `/insight` | Weekly metrics report: development summary, architecture changes, priorities, blocked items |
 | `/triage-ideas` | Process Obsidian Ideas.md inbox: classify, confirm with user, route to project roadmap |
 
-### Skill Maintenance
+### Skill Maintenance & Continuous Learning
 
 | Skill | Purpose |
 |-------|---------|
-| `/skill-audit` | 5 automated checks: staleness, safety guards, cross-skill consistency, efficiency, step compliance |
+| `/skill-audit` | 6 automated checks: staleness, safety guards, cross-skill consistency, efficiency, step compliance, learning pipeline health |
 | `/skill-creator` | Create, test, and optimize new skills with structured eval framework |
+| `/evolve` | Continuous learning pipeline — automatic pattern extraction from tool usage, instinct management, skill evolution |
+
+## Continuous Learning Pipeline
+
+The `/evolve` skill implements an automatic pattern extraction system inspired by [everything-claude-code](https://github.com/affaan-m/everything-claude-code):
+
+```
+Tool calls → observe.js (hook) → observations-structural.jsonl (metadata only)
+                                              ↓
+                                observer-analyze.js (Stop hook)
+                                checks threshold (50+ new observations)
+                                              ↓
+                                Spawns claude --model opus
+                                Reads structural data, writes instinct files
+                                              ↓
+                                instincts/personal/*.md (YAML+MD)
+                                              ↓
+                                /evolve → clusters → skills
+```
+
+**Security model**: Observations are split into two streams:
+- **Structural** (tool names, file paths, command previews, exit codes) — fed to the automatic Opus observer. Contains no external content, eliminating prompt injection surface.
+- **Content** (full input/output with secret scrubbing) — only accessible via CLI with output sanitization. Never fed to automated analysis.
+
+All CLI output passes through `sanitizeForDisplay()` which strips XML-like tags, directive patterns, and collapses code blocks before display.
 
 ## Installation
 
 ### Project-level (recommended)
-Copy the `skills/` directory into your project:
+Copy the `skills/` and `scripts/` directories into your project:
 
 ```bash
 cp -r skills/ your-project/.claude/skills/
+cp -r scripts/ your-project/.claude/scripts/
 ```
 
 ### Personal (all projects)
-Copy to your personal skills directory:
+Copy to your personal directories:
 
 ```bash
 cp -r skills/ ~/.claude/skills/
+cp -r scripts/ ~/.claude/scripts/
+```
+
+### Enable observation hooks
+
+Add these hooks to your project's `.claude/settings.json` to enable the continuous learning pipeline:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|Read|Glob|Grep|Agent",
+        "hooks": [{
+          "type": "command",
+          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/scripts/observe.js\" 2>/dev/null || true",
+          "timeout": 5,
+          "async": true
+        }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|Read|Glob|Grep|Agent",
+        "hooks": [{
+          "type": "command",
+          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/scripts/observe.js\" 2>/dev/null || true",
+          "timeout": 5,
+          "async": true
+        }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/scripts/observer-analyze.js\" 2>/dev/null || true",
+          "timeout": 10,
+          "async": true
+        }]
+      }
+    ]
+  }
+}
 ```
 
 ## Configuration
