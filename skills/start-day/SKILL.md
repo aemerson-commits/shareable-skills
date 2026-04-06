@@ -85,6 +85,20 @@ Check any pending infrastructure items from MEMORY.md alerts. For example:
 
 Report verified items and clear resolved alerts from MEMORY.md.
 
+### Step 8 — Friday Wisdom Check
+
+Check if today is Friday:
+```bash
+date +%u
+```
+
+If the result is `5` (Friday) and the `/wisdom` skill is installed, after presenting the briefing, ask:
+
+> **It's Friday — run weekly `/wisdom`?** This will audit skill health, review evolve instincts, and propose knowledge improvements.
+
+If the user says yes, invoke the `/wisdom` skill. Do NOT auto-run it — always ask first.
+If `/wisdom` is not installed, skip this step silently.
+
 ## Output Format
 
 Present a concise morning briefing:

@@ -1,7 +1,7 @@
 {
   "name": "agent-team-skills",
-  "version": "4.0.0",
-  "description": "43 Claude Code skills + continuous learning pipeline — development pipeline, build orchestration, diagnostic escalation, document generation, creative tools, session management, skill maintenance, and automated pattern extraction. Built on parallel agent teams.",
+  "version": "4.1.0",
+  "description": "44 Claude Code skills + continuous learning pipeline — development pipeline, build orchestration, diagnostic escalation, document generation, creative tools, session management, skill maintenance, and automated pattern extraction. Built on parallel agent teams.",
   "author": "aemerson-commits",
   "skills": [
     "skills/grill-me",
@@ -46,7 +46,8 @@
     "skills/slack-gif-creator",
     "skills/theme-factory",
     "skills/html-slides",
-    "skills/evolve"
+    "skills/evolve",
+    "skills/wisdom"
   ],
   "scripts": [
     "scripts/observe.js",
