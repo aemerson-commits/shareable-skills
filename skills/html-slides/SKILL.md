@@ -1,3 +1,9 @@
+---
+name: html-slides
+description: "Create polished, interactive HTML presentation slides from a single prompt. Output is self-contained HTML."
+user-invocable: true
+---
+
 # HTML Slides
 
 Create polished, interactive HTML presentation slides from a single prompt. Output is a self-contained HTML file with embedded CSS and JS — no dependencies needed.
@@ -13,7 +19,7 @@ A single `.html` file saved to the user's specified location (default: `C:/tmp/s
 ## Design Principles
 
 - **Professional and clean** — avoid "AI-flavored" design. Use generous whitespace, strong hierarchy, and restrained color.
-- **Dark theme by default** — dark backgrounds (#0f172a to #1e293b range), light text. Matches our dashboard aesthetic.
+- **Dark theme by default** — dark backgrounds (#0f172a to #1e293b range), light text.
 - **One idea per slide** — short headlines, supporting bullets or visuals. Never wall-of-text.
 - **Keyboard navigation** — arrow keys, spacebar, or click to advance. Show slide counter.
 - **Responsive** — works on projector (16:9), laptop screen, or tablet.
@@ -107,10 +113,3 @@ showSlide(0);
 4. Save to disk and report the file path
 5. Offer to open in browser via Chrome DevTools MCP if available
 
-## HSS-Specific Additions
-
-When creating slides for HSS/Huntington Steel leadership:
-- Use HSS brand colors: navy (#1e3a5f), steel gray (#4a5568), accent orange (#ed8936)
-- Include HSS logo placeholder in title slide
-- Default footer: "Huntington Steel & Supply | Confidential"
-- Data slides can pull from known metrics (burn rates, order counts, etc.) if context available

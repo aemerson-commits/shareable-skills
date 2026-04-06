@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.2.0 (2026-04-06)
+- Added .gitattributes to silence CRLF warnings
+- Added CHANGELOG.md with full version history
+- Added Quick Start section to README
+- Added categories to manifest.json for skill discoverability
+- Moved scripts/ into skills/evolve/scripts/ (evolve-specific, not general infra)
+- Fixed missing YAML frontmatter on debug-collaborate and html-slides
+- Removed HSS/Huntington company references from html-slides
+- Updated GitHub repo description
+- Updated installation docs for new structure
+
 ## 4.1.0 (2026-04-06)
 - Added `/wisdom` skill — weekly knowledge review that cross-references evolve instincts against CLAUDE.md and skills
 - Enhanced `/evolve` — full setup guide, two-directory architecture docs, instinct status lifecycle, Windows `windowsHide` fix
