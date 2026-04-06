@@ -1,6 +1,6 @@
 {
   "name": "shareable-skills",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "description": "44 Claude Code skills + continuous learning pipeline — development pipeline, build orchestration, diagnostic escalation, document generation, creative tools, session management, skill maintenance, and automated pattern extraction. Built on parallel agent teams.",
   "author": "aemerson-commits",
   "skills": [
@@ -49,9 +49,14 @@
     "skills/evolve",
     "skills/wisdom"
   ],
-  "scripts": [
-    "scripts/observe.js",
-    "scripts/observer-analyze.js",
-    "scripts/instinct-cli.js"
-  ]
+  "categories": {
+    "Development Pipeline": ["skills/grill-me", "skills/research-gate", "skills/write-plan", "skills/review-impl", "skills/cascade-orchestration", "skills/debug-collaborate"],
+    "Build Orchestration": ["skills/full-stack-build", "skills/propagate-feature", "skills/worker-build", "skills/deploy-all", "skills/worktree-guard"],
+    "Quality & Verification": ["skills/verify-complete", "skills/pre-merge-review", "skills/schema-check", "skills/env-audit", "skills/audit-components", "skills/webapp-testing", "skills/data-reconciliation", "skills/frontend-design"],
+    "Diagnostic Escalation": ["skills/persistent-issue", "skills/deep-root-cause", "skills/full-stack-trace", "skills/isolation-test", "skills/temporal-forensics", "skills/regression-bisect"],
+    "Document & Data": ["skills/pdf", "skills/docx", "skills/xlsx", "skills/internal-comms", "skills/mcp-builder"],
+    "Creative Tools": ["skills/web-artifacts-builder", "skills/algorithmic-art", "skills/canvas-design", "skills/slack-gif-creator", "skills/theme-factory", "skills/html-slides"],
+    "Session Management": ["skills/start-day", "skills/session-notes", "skills/insight", "skills/triage-ideas"],
+    "Skill Maintenance & Learning": ["skills/skill-audit", "skills/skill-creator", "skills/evolve", "skills/wisdom"]
+  }
 }

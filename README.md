@@ -2,6 +2,21 @@
 
 A complete development methodology built on parallel agent teams. 44 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
+## Quick Start
+
+New here? Start with the development pipeline — 5 skills that cover intent → research → planning → build → review:
+
+```bash
+# Copy just the skills you want
+cp -r skills/grill-me skills/research-gate skills/write-plan skills/review-impl your-project/.claude/skills/
+```
+
+Then invoke them in order: `/grill-me` → `/research-gate` → `/write-plan` → build → `/review-impl`. Each skill documents what it does, what agents it dispatches, and when to use it.
+
+Want diagnostics too? Add `/persistent-issue` — it auto-classifies bugs and dispatches the right diagnostic team (A through E).
+
+Want continuous learning? Add `/evolve` + `/wisdom` and the observation hooks. See [Continuous Learning Pipeline](#continuous-learning-pipeline) below.
+
 ## The Pipeline
 
 ```
@@ -143,24 +158,30 @@ All CLI output passes through `sanitizeForDisplay()` which strips XML-like tags,
 ## Installation
 
 ### Project-level (recommended)
-Copy the `skills/` and `scripts/` directories into your project:
+Copy the skills you want into your project:
 
 ```bash
+# All skills
 cp -r skills/ your-project/.claude/skills/
-cp -r scripts/ your-project/.claude/scripts/
+
+# Or just specific ones
+cp -r skills/grill-me skills/research-gate your-project/.claude/skills/
 ```
 
 ### Personal (all projects)
-Copy to your personal directories:
+Copy to your personal skills directory:
 
 ```bash
 cp -r skills/ ~/.claude/skills/
-cp -r scripts/ ~/.claude/scripts/
 ```
 
-### Enable observation hooks
+### Enable continuous learning (optional)
 
-Add these hooks to your **project-level** settings file (`~/.claude/projects/<project-hash>/settings.json`) to enable the continuous learning pipeline:
+If you installed `/evolve`, copy its scripts and add observation hooks to your **project-level** settings file (`~/.claude/projects/<project-hash>/settings.json`):
+
+```bash
+cp -r skills/evolve/scripts/ your-project/.claude/scripts/
+```
 
 ```json
 {
