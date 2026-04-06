@@ -1,6 +1,6 @@
-# Agent Team Skills for Claude Code
+# Shareable Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 43 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
+A complete development methodology built on parallel agent teams. 44 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
 ## The Pipeline
 
@@ -113,6 +113,7 @@ The router classifies the issue, tries the matched team first, and if unresolved
 | `/skill-audit` | 6 automated checks: staleness, safety guards, cross-skill consistency, efficiency, step compliance, learning pipeline health |
 | `/skill-creator` | Create, test, and optimize new skills with structured eval framework |
 | `/evolve` | Continuous learning pipeline — automatic pattern extraction from tool usage, instinct management, skill evolution |
+| `/wisdom` | Weekly knowledge review — cross-references instincts against CLAUDE.md and skills, proposes enhancements and cleanup |
 
 ## Continuous Learning Pipeline
 
@@ -130,6 +131,7 @@ Tool calls → observe.js (hook) → observations-structural.jsonl (metadata onl
                                 instincts/personal/*.md (YAML+MD)
                                               ↓
                                 /evolve → clusters → skills
+                                /wisdom → cross-reference → recommendations
 ```
 
 **Security model**: Observations are split into two streams:
@@ -158,7 +160,7 @@ cp -r scripts/ ~/.claude/scripts/
 
 ### Enable observation hooks
 
-Add these hooks to your project's `.claude/settings.json` to enable the continuous learning pipeline:
+Add these hooks to your **project-level** settings file (`~/.claude/projects/<project-hash>/settings.json`) to enable the continuous learning pipeline:
 
 ```json
 {
@@ -218,9 +220,10 @@ These skills work with any codebase out of the box. Customize for your project:
 
 ## Requirements
 
-- Claude Code with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: true` in settings
-- `effortLevel: max` recommended for best agent team performance
-- All agent dispatches use `model: "opus"` by default
+- Claude Code CLI (latest version recommended)
+- All agent dispatches use `model: "opus"` by default for best results
+- Session management skills require [Obsidian](https://obsidian.md) with CLI access
+- Continuous learning pipeline requires Node.js for hook scripts
 
 ## How It Works
 
