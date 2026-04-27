@@ -1,6 +1,6 @@
 # Shareable Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 44 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
+A complete development methodology built on parallel agent teams. 46 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
 ## Quick Start
 
@@ -129,6 +129,13 @@ The router classifies the issue, tries the matched team first, and if unresolved
 | `/skill-creator` | Create, test, and optimize new skills with structured eval framework |
 | `/evolve` | Continuous learning pipeline — automatic pattern extraction from tool usage, instinct management, skill evolution |
 | `/wisdom` | Weekly knowledge review — cross-references instincts against CLAUDE.md and skills, proposes enhancements and cleanup |
+
+### Reference & Conventions
+
+| Skill | Purpose |
+|-------|---------|
+| `/model-selection` | Per-agent model dispatch guidance — Sonnet floor, Opus for critical review, effort-tier ladder |
+| `/throwaway-script` | Pattern for one-shot `.mjs` Node scripts that need `.env` secrets — location, ESM form, Windows path quirks |
 
 ## Continuous Learning Pipeline
 

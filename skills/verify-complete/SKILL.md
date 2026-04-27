@@ -1,19 +1,100 @@
 ---
 name: verify-complete
-description: "Verify feature completion with evidence — greps code, runs build, takes screenshots. Use BEFORE claiming any feature is done. Triggers: 'verify complete', 'check if done', 'is this actually working', or proactively after claiming 3+ items complete."
+description: "Evidence-based completion check before claims persist to persistent state, session notes, or roadmap. Use BEFORE writes that say items are done, BEFORE answering 'how much is done?', or before any multi-item completion claim."
 user-invocable: true
 ---
 
 # Verify Complete — Evidence-Based Completion Check
 
-Prevents overclaiming by requiring code-level evidence for each claimed feature. Use this before marking items as done in session notes, roadmaps, or status reports.
+Prevents overclaiming by requiring code-level evidence for each claimed feature. Run this BEFORE the claim hits a persistence layer (persistent state files, session notes, roadmap tracking) — once it's written, it propagates to future sessions unchallenged.
 
 ## When to Use
 
-- After implementing a feature checklist (e.g., "10 UI improvement ideas")
-- Before writing session notes that claim items are complete
+Pre-claim, not post-claim:
+
+- BEFORE writing to persistent state files (any "Active Now" entry, completion status)
+- BEFORE writing session notes that claim items are complete
+- BEFORE updating roadmap item status in any tracking system
+- BEFORE answering "how much of X is done?" / "is the feature ready?"
+- After implementing a multi-item feature checklist
 - When reporting status to stakeholders
-- Anytime you're about to say "X of Y items done"
+
+Even one false "done" claim poisons your persistent state and propagates into future sessions.
+
+**Note**: If your harness has a Stop hook that catches single-turn deploy claims (e.g. "deployed and verified" with no evidence command in the same turn), that handles simple cases. This skill handles the heavier case: multi-item checklists, persistent-state writes, status reports.
+
+## Verification Recipes by Claim Type
+
+Different claims need different evidence. Pick the recipe that matches the claim shape — generic "grep for it" is not enough for deploys, schema changes, or cron triggers.
+
+### Deploy claim ("deployed and verified", "shipped to dev/prod")
+
+```bash
+# Verify the live endpoint returns expected content
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://{{your-app}}.example.com/api/health"
+```
+
+Pass criteria: HTTP 200 + JSON body. HTML response = auth redirect (auth issue). 5xx = function bundle missing or crashed.
+
+### CI claim ("CI passed", "tests green", "workflow succeeded")
+
+```bash
+gh run list --branch <branch> --limit 3 --json databaseId,status,conclusion,name
+```
+
+Pass criteria: all recent runs show `status=completed`, `conclusion=success`. In-progress runs do not count — wait or use the Monitor tool.
+
+### Database migration claim ("migration applied", "schema updated")
+
+```bash
+npx wrangler d1 execute {{your-d1-db}} --remote \
+  --command="SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 5"
+```
+
+Pass criteria: the new migration filename appears in the result. Empty result or older names only = migration did not actually apply.
+
+### Worker cron claim ("cron registered", "schedule active", "trigger live")
+
+```bash
+# Use your platform's API to verify the schedule registration timestamp
+# For Cloudflare Workers, check the CF API schedules endpoint:
+ACCT_ID=<account-id>
+TOKEN=<oauth-token>
+curl -s -H "Authorization: Bearer ${TOKEN}" \
+  "https://api.cloudflare.com/client/v4/accounts/${ACCT_ID}/workers/scripts/{{your-worker}}/schedules"
+```
+
+Pass criteria: `modified_on` >= the time of your last deploy. If `modified_on` is older than your deploy, the trigger is silently stuck — re-register with PUT [] then PUT [{...}]. The deploy tool's "Deployed triggers" output is NOT proof on its own.
+
+### UI feature claim ("button works", "modal renders", "label updated")
+
+Use chrome-devtools MCP — `new_page` → `navigate_page` → `take_screenshot` of the specific component. HTTP 200 and unit tests don't prove what the user sees. Visual verification is mandatory for any UI label/render change. Note: the same label is often rendered in multiple places (sidebar, page header, document title, tab labels, breadcrumbs) — grep ALL render sites before claiming a label change is done.
+
+### Feature checklist item ("idea N is done", "X of Y features shipped")
+
+```bash
+grep -rn "<feature-keyword>" <project>/src/ --include="*.jsx" --include="*.js"
+```
+
+Pass criteria: at least one of [file path, JSX render site, state hook, API call]. Help-text-only = `[DOCUMENTED ONLY]`, not `[VERIFIED]`. CSS without JSX = `[PARTIAL]`.
+
+### Schema/code change claim ("alert wires up", "logic updated")
+
+```bash
+# Smoke-test the relevant endpoint
+curl -s -X POST -H "Authorization: Bearer ${AUTH_TOKEN}" \
+  "https://{{your-app}}.example.com/api/{{endpoint}}/run"
+# Confirm the action was logged in your audit table
+npx wrangler d1 execute {{your-d1-db}} --remote \
+  --command="SELECT * FROM audit_log ORDER BY id DESC LIMIT 3"
+```
+
+Pass criteria: 200 from the endpoint AND a fresh row in the audit log. 200 alone doesn't prove the action happened — only the audit row does.
+
+### Multi-item completion ("X of Y items done")
+
+Run Steps 1-6 below. Do not skip Step 1 (listing claims explicitly) — that's where overcounting is caught.
 
 ## Steps
 
@@ -79,10 +160,10 @@ Take screenshots of the feature in action. If auth blocks access, note it and ve
 | 3 | Filter  | Found but missing dropdown JSX | PASS | - | PARTIAL |
 ```
 
-### 7. Correct Memory/Notes
+### 7. Correct Persistent State
 
 If any items were previously claimed as done but are NOT VERIFIED:
-- Update MEMORY.md to correct the status
+- Update persistent state files to correct the status
 - Update session notes if they contain false claims
 - Update roadmap items if they were marked completed
 

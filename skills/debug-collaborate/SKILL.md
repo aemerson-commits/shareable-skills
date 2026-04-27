@@ -1,6 +1,6 @@
 ---
 name: debug-collaborate
-description: "Multi-agent collaborative debugging — parallel hypothesis generation and testing."
+description: "Multi-agent collaborative debugging — parallel hypothesis generation and testing. Use when a solution didn't work, a bug persists, or the user reports 'still happening' / 'not fixed' / 'didn't work'."
 user-invocable: true
 ---
 
@@ -82,6 +82,36 @@ After all agents report:
 ## Arguments
 - If the user provides context about what failed, use it to frame Phase 1
 - If no context, ask the user the Phase 1 questions before spawning agents
+
+### React fiber walking for state inspection
+
+When diagnosing a React state bug, you often need to read values from live hooks (e.g. a state map, an orders array) without the app exposing them on `window`. Walk the fiber tree from the root and match hooks by shape.
+
+```js
+const root = document.querySelector('#root');
+const key = Object.keys(root).find(k => k.startsWith('__reactContainer'));
+let fiber = root[key].stateNode?.current;
+const walk = (node, d=0) => {
+  if (!node || d > 300) return;
+  let hook = node.memoizedState;
+  while (hook) {
+    const v = hook.memoizedState;
+    // Match by shape (e.g. object-of-overrides with the field you expect)
+    if (v && typeof v === 'object' && !Array.isArray(v) && v !== null) {
+      const s = v[Object.keys(v)[0]];
+      if (s?.someExpectedField !== undefined) { /* found the state map */ }
+    }
+    hook = hook.next;
+  }
+  walk(node.child, d+1); walk(node.sibling, d+1);
+};
+walk(fiber);
+```
+
+**Caveats**:
+- Fragile — depends on React internals (the `__reactContainer*` key name and fiber structure). Use only for ad-hoc diagnosis, **never** ship in production code.
+- Match hooks by **shape** (presence of known fields), not by position — hook order shifts across renders and component versions.
+- Pair with the Chrome DevTools MCP `evaluate_script` tool to run it inside a headless debugging session.
 
 ## When NOT to Use This Skill
 - Simple typos or obvious one-line fixes

@@ -1,6 +1,6 @@
 ---
 name: schema-check
-description: "Verify D1/SQLite schema, KV keys, and env bindings before writing queries or endpoints. Use BEFORE any database SQL, KV operations, or config changes. Triggers: 'check schema', 'what columns does X have', or proactively when writing DB/KV code."
+description: "Verify database schema, KV keys, and env bindings before writing queries or endpoints. Use BEFORE any SQL, KV operations, or config changes. Triggers: 'check schema', 'what columns does X have', or proactively when writing DB/KV code."
 user-invocable: true
 ---
 

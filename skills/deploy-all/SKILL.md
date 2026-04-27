@@ -10,7 +10,7 @@ Deploys all projects with changes in a single orchestrated flow. Replaces the ma
 
 ## Projects
 
-Configure your project table:
+Configure your project table for your repo:
 
 | Project | Dir | Dev CF Project | Prod CF Project | CI Workflow |
 |---------|-----|----------------|-----------------|-------------|
@@ -69,21 +69,38 @@ wait
 
 ### 6. Watch CI
 
+**Prefer the Monitor tool** over `gh run watch --exit-status` when possible — it streams run events as notifications without blocking the turn, so you can progress other work (verification, notes) while CI runs.
+
 ```bash
 gh run list --limit 5 --json databaseId,status,name
-# Watch each in-progress run
-gh run watch <run-id> --exit-status
 ```
+
+Then use the Monitor tool on each in-progress run. Shell-loop fallback when Monitor isn't suitable:
+
+```bash
+# Non-blocking fallback: poll until all runs resolve, then report.
+# Monitor tool is preferred over this for longer CI runs.
+until [ "$(gh run list --branch main --limit 5 --json status --jq '.[] | select(.status != "completed") | .status' | wc -l)" = "0" ]; do
+  sleep 10
+done
+gh run list --branch main --limit 5 --json databaseId,conclusion,name
+```
+
+Avoid `gh run watch --exit-status` chained with other commands — it blocks the whole turn and burns prompt cache on waits. Monitor or the `until` loop lets the agent do other work while CI completes.
 
 ### 7. Verify Live URLs
 
 ```bash
-curl -s -o /dev/null -w "project-a: HTTP %{http_code}\n" https://your-project-a-dev.pages.dev
-curl -s -o /dev/null -w "project-b: HTTP %{http_code}\n" https://your-project-b-dev.pages.dev
-curl -s -o /dev/null -w "project-c: HTTP %{http_code}\n" https://your-project-c-dev.pages.dev
+# With CF Access credentials (adapt to your auth mechanism):
+curl -s -o /dev/null -w "project-a: HTTP %{http_code}\n" \
+  -H "CF-Access-Client-Id: ${CF_ID}" -H "CF-Access-Client-Secret: ${CF_SECRET}" \
+  https://your-project-a-dev.{{your-domain}}
+curl -s -o /dev/null -w "project-b: HTTP %{http_code}\n" \
+  -H "CF-Access-Client-Id: ${CF_ID}" -H "CF-Access-Client-Secret: ${CF_SECRET}" \
+  https://your-project-b-dev.{{your-domain}}
 ```
 
-302 = auth gate (expected). 5xx = broken.
+200 = healthy. 5xx = broken. 302 = auth credentials missing.
 
 ### 8. Report
 
@@ -92,8 +109,8 @@ Print a consolidated matrix:
 ```
 | Project    | Build | Lint | Deploy | CI  | Live |
 |------------|-------|------|--------|-----|------|
-| Project A  | PASS  | PASS | PASS   | OK  | 302  |
-| Project B  | PASS  | PASS | PASS   | OK  | 302  |
+| Project A  | PASS  | PASS | PASS   | OK  | 200  |
+| Project B  | PASS  | PASS | PASS   | OK  | 200  |
 | Project C  | SKIP  | SKIP | SKIP   | -   | -    |
 ```
 
@@ -110,11 +127,15 @@ For workers that changed:
 cd workers/<name> && npx wrangler deploy
 ```
 
-IMPORTANT: After `wrangler deploy` for workers, verify cron triggers are listed in the output. `wrangler secret put` can unregister crons on some platforms.
+IMPORTANT: After `wrangler deploy` for workers, verify cron triggers are actually registered via the CF API — wrangler output is not reliable. See `/worker-build` § "Cron Trigger Verification" for the full verification pattern. `wrangler secret put` can also silently unregister crons; always redeploy after setting secrets.
+
+## Model Guidance
+
+When dispatching agents for parallel deploy work, prefer `model: "opus"` (at max effort) for any agent doing code review, security audit, or architectural decisions. Use `model: "sonnet"` for routine build/deploy/verification tasks.
 
 ## Safety
 
 - NEVER deploy to production without explicit `--prod` flag
-- ALWAYS build before deploying (dist/ must be fresh)
+- ALWAYS build before deploying (`dist/` must be fresh)
 - ALWAYS deploy from the project directory (not repo root — may skip Functions bundle)
 - ALWAYS verify after deploy — never claim "deployed" without HTTP verification

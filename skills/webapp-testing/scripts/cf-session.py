@@ -10,10 +10,11 @@ Usage:
   python cf-session.py status                           # Check if sessions are still valid
 
 Session data is stored in:
-  C:/tmp/pw-sessions/portal/    (for hss-portal-dev.pages.dev)
-  C:/tmp/pw-sessions/shop-floor/ (for hss-shop-floor-dev.pages.dev)
+  /tmp/pw-sessions/<site-key>/   (one directory per site)
 
 First run: use 'login' to authenticate. Sessions persist across runs until cookies expire.
+
+Configure SITES below with your own CF Access-protected URLs:
 """
 
 import sys
@@ -22,11 +23,12 @@ import time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
-SESSION_DIR = Path("C:/tmp/pw-sessions")
+SESSION_DIR = Path("/tmp/pw-sessions")
+
+# Configure with your own CF Access-protected URLs:
 SITES = {
-    "portal": "https://hss-portal-dev.pages.dev",
-    "shop-floor": "https://hss-shop-floor-dev.pages.dev",
-    "operator": "https://hss-operator-dev.pages.dev",
+    "app-a": "https://your-app-a.{{your-domain}}",
+    "app-b": "https://your-app-b.{{your-domain}}",
 }
 
 def get_site_key(url):

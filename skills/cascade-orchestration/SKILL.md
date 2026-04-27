@@ -1,6 +1,7 @@
 ---
 name: cascade-orchestration
 description: "Reusable agent team cascade patterns — parallel dispatch, sequential pipelines, fan-out/fan-in, and cross-project propagation"
+user-invocable: true
 ---
 
 # Cascade Orchestration Patterns
@@ -108,6 +109,21 @@ Main Agent reads git diff
 - Only dispatch agents for affected areas
 - Skip unnecessary agents to save context and cost
 - Log which agents were dispatched and which were skipped
+
+## Multi-Project Deploy-Time Smoke Pattern
+
+After deploying multiple projects, capture screenshots for a permanent audit trail of "what shipped today":
+
+1. Write a Node smoke script at `test-results/smoke-YYYY-MM-DD/run-smoke-p1.mjs` (keep in a dated directory for audit history).
+2. Inject authentication credentials via request headers or session cookies on the browser context.
+3. Navigate each deployed URL, wait for hydration, take stage-named screenshots:
+   - `app-a-01-initial.png`, `app-a-02-main-view.png`
+   - `app-b-01-initial.png`, `app-b-02-loaded.png`
+4. Execute: `node test-results/smoke-YYYY-MM-DD/run-smoke-p1.mjs`
+5. Review each PNG visually. Screenshot review consistently surfaces issues (missing data, broken layouts, wrong colors) that HTTP 200 and unit tests miss entirely.
+6. Iterate: write `run-smoke-p2.mjs` for deeper views (modals, admin settings, theme toggle), `run-smoke-p3.mjs` for admin-only areas.
+
+The screenshot directory becomes the audit trail for the deploy. Archive it alongside the deploy commit SHA.
 
 ## Anti-Patterns
 

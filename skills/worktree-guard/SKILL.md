@@ -73,6 +73,19 @@ If build fails, the merge introduced an error — investigate before committing.
 | API handler files | Add new endpoint cases to existing if/else chain |
 | `package.json` | Merge dependencies (usually additive) |
 
+## Worktree Agent Cherry-Pick Lifecycle (6 Steps)
+
+When a worktree agent commits its changes to a branch, use this sequence to integrate back into `dev` (this is the canonical pattern):
+
+1. **Fetch**: `git fetch origin <agent-branch>` after agent reports completion
+2. **Diff**: `git log main..origin/<agent-branch> --oneline` to confirm commits exist. If empty, the agent failed to commit — redo the work in the main tree.
+3. **Cherry-pick**: `git cherry-pick origin/<agent-branch>` (single commit) or `git cherry-pick <first>^..<last>` for multi-commit branches. For a clean integration, `git merge --no-ff origin/<agent-branch>` also works.
+4. **Conflict handling**: For conflicts in shared files, prefer `git checkout --theirs <file>` — the agent's edits are the intended changes; main usually has unrelated drift. Manual merge only when both sides independently touched the same region.
+5. **Test**: Run project tests + `npm run build` in each affected project before pushing.
+6. **Cleanup**: `git worktree remove <path>` and `git branch -D <agent-branch>` once merged. Remote branch: `git push origin --delete <agent-branch>`.
+
+**Empty diff = silent commit failure**: If `git log main..origin/<agent-branch>` returns nothing, the agent ran but never committed. Do not proceed — redo the task.
+
 ## Anti-Patterns
 
 - NEVER `cp` a worktree file over a main tree file without checking for conflicts first

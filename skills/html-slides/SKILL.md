@@ -1,6 +1,6 @@
 ---
 name: html-slides
-description: "Create polished, interactive HTML presentation slides from a single prompt. Output is self-contained HTML."
+description: "HTML Slides — Create polished, interactive HTML presentation slides from a single prompt. Output is a self-contained HTML file. Triggers: 'create a presentation', 'make slides', 'build a deck'."
 user-invocable: true
 ---
 
@@ -112,4 +112,3 @@ showSlide(0);
 3. Generate the full HTML file
 4. Save to disk and report the file path
 5. Offer to open in browser via Chrome DevTools MCP if available
-

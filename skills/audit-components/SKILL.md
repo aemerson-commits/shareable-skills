@@ -34,8 +34,8 @@ Check if any export from shared files is not imported anywhere:
 
 ### 5. Lint and Build (all projects)
 ```bash
-cd project-a && npx eslint src/ && npm run build
-cd project-b && npx eslint src/ && npm run build
+cd project-a && npx biome lint src/ && npm run build
+cd project-b && npx biome lint src/ && npm run build
 # ... repeat for each project
 ```
 All must pass with 0 errors. Report any warnings.
@@ -61,6 +61,8 @@ Dispatch 2 agents simultaneously (model: "opus") for checks 3, 4, and 6:
 
 - **Agent: Shared Utility Auditor** — Check for duplicate utility definitions across all projects (check 3). Verify re-exports match shared source exports (check 6). Flag any missing re-exports or local duplicates.
 - **Agent: Unused Export Auditor** — Check all shared exports have at least one consumer across all projects (check 4). Flag orphaned exports with zero consumers.
+
+Each agent returns: `{ duplicates[], missingReexports[], unusedExports[] }`.
 
 ### Phase 3 — Synthesize
 
@@ -90,6 +92,44 @@ Report results as:
 - **PASS** items (green) - everything correct
 - **WARN** items (yellow) - non-breaking but worth noting (unused props, etc.)
 - **FAIL** items (red) - will cause bugs or build failures
+
+## Pre-Edit Consumer Scan
+
+Before editing or removing CSS classes or data field references:
+1. Grep for the class/field across ALL projects
+2. Check both JSX references (`className=`) and CSS definitions (`.class-name {`)
+3. Check both component CSS files AND `App.css` in each project
+
+## Post-Edit Completeness Check
+
+After applying changes across multiple files:
+1. Re-grep for the changed pattern to confirm ALL instances updated
+2. This catches files you didn't know about (e.g., a third project copy)
+
+## Post-Edit Re-Grep Verification
+
+After any multi-file pattern edit (renaming a prop, removing a CSS class, swapping an import, adding a parameter to a shared function), re-run the ORIGINAL pre-edit grep against the codebase AFTER your edits:
+
+```bash
+# Example: after adding a param to a shared utility across all consumers
+grep -rn "mySharedFn" project-a/src/ project-b/src/ shared/
+
+# Example: after renaming a CSS class
+grep -rn "old-class-name" project-a/src/ project-b/src/
+
+# Example: after converting a prop to an import
+grep -rn "propsName\|OldPropPattern" --include="*.jsx" .
+```
+
+The re-grep catches:
+- **Files added between Edit operations** that weren't in the initial scan
+- **Import aliases** that resolve differently across projects
+- **Test files** that import or mock the changed symbol
+- **Index re-exports** that forward the old signature
+
+Zero results = all instances updated. Any remaining hits = missed site. Fix before committing.
+
+This is the post-edit equivalent of the pre-edit consumer scan — both are required for complete coverage. Running only the pre-edit scan leaves a gap for files created or modified after your initial grep.
 
 ## When to Use
 - After modifying shared utilities or constants

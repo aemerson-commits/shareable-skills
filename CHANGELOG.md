@@ -1,5 +1,22 @@
 # Changelog
 
+## 5.0.0 (2026-04-27)
+- Added `/model-selection` — per-agent model dispatch guide (Sonnet floor, Opus for critical review, effort-tier ladder)
+- Added `/throwaway-script` — pattern for one-shot `.mjs` Node scripts that need `.env` secrets (location, ESM form, Windows path quirks)
+- Major rewrite of `/verify-complete` — 8 per-claim-type verification recipes (deploy / CI / migration / cron / UI / checklist / schema / multi-item)
+- Major additions to `/webapp-testing` — CF Access cookie-injection bypass, UI label audit + visual verification, RBAC Playwright pattern, bootstrap admin short-circuit gotcha
+- Added Cron Trigger Verification section to `/worker-build` — silent-stuck gotcha, `modified_on` check, wipe-then-readd remedy, OAuth token expiry
+- Updated `/deploy-all` — Monitor tool preferred over `gh run watch`, Opus-max guidance
+- Major additions to `/frontend-design` — full design system stack (CSS tokens, Tailwind v4 `@theme inline`, shadcn/ui, theme system, anti-patterns)
+- Updated `/pre-merge-review` — pre-flight validation, live endpoint testing, expanded SQL/migration discipline (NULL-distinct, ON CONFLICT)
+- Updated `/session-notes` — Feature-Ship Checklist contract, MANDATORY agent dispatches, expanded help-content + skill-usage tracker steps
+- Updated `/audit-components` — pre-edit consumer scan, post-edit completeness + re-grep verification
+- Updated `/cascade-orchestration` — multi-project deploy-time smoke pattern
+- Updated `/debug-collaborate` — React fiber walking for state inspection
+- Updated `/worktree-guard` — 6-step worktree agent cherry-pick lifecycle
+- Renamed `Reference & Conventions` category in manifest
+- Total: 46 skills
+
 ## 4.2.0 (2026-04-06)
 - Added .gitattributes to silence CRLF warnings
 - Added CHANGELOG.md with full version history

@@ -1,7 +1,7 @@
 {
   "name": "shareable-skills",
-  "version": "4.2.0",
-  "description": "44 Claude Code skills + continuous learning pipeline — development pipeline, build orchestration, diagnostic escalation, document generation, creative tools, session management, skill maintenance, and automated pattern extraction. Built on parallel agent teams.",
+  "version": "5.0.0",
+  "description": "46 Claude Code skills + continuous learning pipeline — development pipeline, build orchestration, diagnostic escalation, document generation, creative tools, session management, skill maintenance, and automated pattern extraction. Built on parallel agent teams.",
   "author": "aemerson-commits",
   "skills": [
     "skills/grill-me",
@@ -47,7 +47,9 @@
     "skills/theme-factory",
     "skills/html-slides",
     "skills/evolve",
-    "skills/wisdom"
+    "skills/wisdom",
+    "skills/model-selection",
+    "skills/throwaway-script"
   ],
   "categories": {
     "Development Pipeline": ["skills/grill-me", "skills/research-gate", "skills/write-plan", "skills/review-impl", "skills/cascade-orchestration", "skills/debug-collaborate"],
@@ -57,6 +59,7 @@
     "Document & Data": ["skills/pdf", "skills/docx", "skills/xlsx", "skills/internal-comms", "skills/mcp-builder"],
     "Creative Tools": ["skills/web-artifacts-builder", "skills/algorithmic-art", "skills/canvas-design", "skills/slack-gif-creator", "skills/theme-factory", "skills/html-slides"],
     "Session Management": ["skills/start-day", "skills/session-notes", "skills/insight", "skills/triage-ideas"],
-    "Skill Maintenance & Learning": ["skills/skill-audit", "skills/skill-creator", "skills/evolve", "skills/wisdom"]
+    "Skill Maintenance & Learning": ["skills/skill-audit", "skills/skill-creator", "skills/evolve", "skills/wisdom"],
+    "Reference & Conventions": ["skills/model-selection", "skills/throwaway-script"]
   }
 }
