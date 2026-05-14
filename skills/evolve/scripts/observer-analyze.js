@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Automatic observer — analyzes accumulated observations and writes instinct files
 // Runs as async Stop hook. Checks threshold, spawns claude CLI for analysis.
-// Uses Opus 4.6 for maximum pattern detection quality.
+// Uses Opus for maximum pattern detection quality.
 
 const fs = require('fs');
 const path = require('path');
@@ -10,12 +10,13 @@ const { spawn } = require('child_process');
 // Guard: prevent recursion when observer spawns claude
 if (process.env.ECC_SKIP_OBSERVE === '1') process.exit(0);
 
-const HOMUNCULUS_DIR = process.env.CLAUDE_PROJECT_DIR
-  ? path.join(process.env.CLAUDE_PROJECT_DIR, '.claude', 'homunculus')
-  : path.join(process.env.USERPROFILE || process.env.HOME, '.claude', 'homunculus');
+// Derive repo root from __dirname — CLAUDE_PROJECT_DIR is not set when Stop hook fires,
+// and process.cwd() is wherever the CLI was invoked from, not the repo. Matches observe.js pattern.
+const PROJECT_DIR = path.resolve(__dirname, '..', '..');
+const HOMUNCULUS_DIR = path.join(PROJECT_DIR, '.claude', 'homunculus');
 const OBSERVATION_THRESHOLD = 50; // minimum new observations before analysis
 const ANALYSIS_COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes between analyses
-const MAX_OBSERVATIONS_TO_ANALYZE = 500;
+const MAX_OBSERVATIONS_TO_ANALYZE = 200;
 
 function getActiveProject() {
   const registryFile = path.join(HOMUNCULUS_DIR, 'projects.json');
@@ -62,9 +63,11 @@ function getRecentObservations(projectId, max = MAX_OBSERVATIONS_TO_ANALYZE) {
 }
 
 function getExistingInstincts(projectId) {
+  const REPO_ROOT = PROJECT_DIR;
   const dirs = [
     path.join(HOMUNCULUS_DIR, 'instincts', 'personal'),
     path.join(HOMUNCULUS_DIR, 'projects', projectId, 'instincts', 'personal'),
+    path.join(REPO_ROOT, 'homunculus', 'instincts', projectId),
   ];
   const instincts = [];
   for (const dir of dirs) {
@@ -96,7 +99,9 @@ try {
 // Threshold met — run analysis
 const observations = getRecentObservations(project.id);
 const existingInstincts = getExistingInstincts(project.id);
-const instinctsDir = path.join(HOMUNCULUS_DIR, 'projects', project.id, 'instincts', 'personal');
+// Write instincts OUTSIDE .claude/ — Claude CLI can't write to .claude/ even with --dangerously-skip-permissions
+const REPO_ROOT = PROJECT_DIR;
+const instinctsDir = path.join(REPO_ROOT, 'homunculus', 'instincts', project.id);
 fs.mkdirSync(instinctsDir, { recursive: true });
 
 const analysisPrompt = `You are analyzing tool usage observations from a Claude Code session to extract reusable behavioral patterns ("instincts").
@@ -167,17 +172,50 @@ fs.writeFileSync(markerFile, String(Date.now()));
 // Spawn claude CLI in background for analysis
 // Uses --print for non-interactive, --model opus for max quality
 try {
-  const child = spawn('claude', [
-    '--print',
-    '--model', 'opus',
-    '--max-turns', '15',
-    '--allowedTools', 'Read,Write,Glob',
-    '-p', `Read the analysis prompt at ${promptFile.replace(/\\/g, '/')} and follow its instructions exactly. Write instinct files as specified. Be thorough but only create instincts for genuinely repeated patterns.`
-  ], {
-    detached: true,
-    stdio: 'ignore',
-    env: { ...process.env, ECC_SKIP_OBSERVE: '1' },
-  });
+  const promptPath = promptFile.replace(/\\/g, '/');
+  const promptArg = `Read the analysis prompt at ${promptPath} and follow its instructions exactly. Write instinct files as specified. Be thorough but only create instincts for genuinely repeated patterns.`;
+
+  // Capture spawn stdout/stderr to a debug log so silent failures surface on next inspection.
+  const debugLog = path.join(HOMUNCULUS_DIR, 'analyze-debug.log');
+  const logFd = fs.openSync(debugLog, 'a');
+  fs.writeSync(logFd, `\n=== ${new Date().toISOString()} project=${project.id} obs=${observations.length} ===\n`);
+
+  // Prefer direct node invocation of cli.js — bypasses cmd.exe entirely on Windows.
+  // The claude.cmd wrapper allocates a visible console window even with windowsHide:true,
+  // because cmd.exe opens a console before Node can suppress it. Calling node directly
+  // with the cli.js path avoids that layer and runs fully headless.
+  const claudeCliJs = process.env.APPDATA
+    ? path.join(process.env.APPDATA, 'npm', 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js')
+    : null;
+
+  let child;
+  if (claudeCliJs && fs.existsSync(claudeCliJs)) {
+    child = spawn(process.execPath, [
+      claudeCliJs,
+      '--print', '--model', 'opus', '--max-turns', '25',
+      '--dangerously-skip-permissions',
+      '--allowedTools', 'Read,Write,Glob',
+      '-p', promptArg,
+    ], {
+      detached: true,
+      stdio: ['ignore', logFd, logFd],
+      windowsHide: true,
+      env: { ...process.env, ECC_SKIP_OBSERVE: '1' },
+    });
+  } else {
+    // Fallback: shell invocation with PATH augmented to find claude.cmd.
+    // May flash a console window on Windows — direct node path above is preferred.
+    const npmGlobalBin = process.env.APPDATA ? path.join(process.env.APPDATA, 'npm') : null;
+    const augmentedPath = npmGlobalBin ? `${npmGlobalBin};${process.env.PATH || ''}` : process.env.PATH;
+    const cmd = `claude --print --model opus --max-turns 25 --dangerously-skip-permissions --allowedTools "Read,Write,Glob" -p "${promptArg.replace(/"/g, '\\"')}"`;
+    child = spawn(cmd, [], {
+      detached: true,
+      stdio: ['ignore', logFd, logFd],
+      shell: true,
+      windowsHide: true,
+      env: { ...process.env, ECC_SKIP_OBSERVE: '1', PATH: augmentedPath },
+    });
+  }
   child.unref();
 
   // Log the analysis trigger

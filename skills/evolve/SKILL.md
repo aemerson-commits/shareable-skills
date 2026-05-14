@@ -1,6 +1,6 @@
 ---
 name: evolve
-description: "Continuous learning pipeline — observes tool usage, detects repeated patterns, and generates instincts (reusable behavioral rules). Pairs with /wisdom for weekly review."
+description: Evolve — Continuous Learning Pipeline. Manages automatic behavioral pattern extraction from Claude Code sessions. Use to install hooks, run analysis, and graduate instincts.
 user-invocable: true
 ---
 
@@ -62,7 +62,7 @@ Add to your **project-level** settings file (`~/.claude/projects/<project-hash>/
 ### 2. Add to .gitignore
 
 ```gitignore
-# Observations (local session data)
+# Observations (local session data, not shareable)
 .claude/homunculus/projects/*/observations-structural.jsonl
 .claude/homunculus/projects/*/observations-content.jsonl
 .claude/homunculus/projects/*/observations.archive/
@@ -84,15 +84,16 @@ When the user says "evolve", "check instincts", "learning status", "prune instin
 
 ## Commands
 
-**Important**: The CLI requires `CLAUDE_PROJECT_DIR` to be set. When running manually:
+The CLI auto-detects the project root via `git rev-parse --show-toplevel`. Running from any subdir of the repo works:
+
 ```bash
-CLAUDE_PROJECT_DIR="$(pwd)" node .claude/scripts/instinct-cli.js <command>
+node .claude/scripts/instinct-cli.js <command>
 ```
 
-Inside Claude Code sessions, `CLAUDE_PROJECT_DIR` is set automatically by the hook runner.
+`CLAUDE_PROJECT_DIR` still takes precedence if set (used inside Claude Code sessions).
 
 ### `/evolve status`
-Show observation counts, instinct counts, last analysis time.
+Show observation counts, instinct counts, last analysis time, evolved skills.
 
 ### `/evolve list`
 List all instincts with confidence scores, grouped by project and scope.
@@ -101,7 +102,7 @@ List all instincts with confidence scores, grouped by project and scope.
 Analyze instinct clusters and show evolution candidates (skills, commands, agents).
 
 ### `/evolve generate`
-Generate skill/command/agent files from qualified instinct clusters.
+Actually generate skill/command/agent files from qualified instinct clusters.
 
 ### `/evolve prune`
 Remove pending instincts older than 30 days (dry run by default). Use `--no-dry-run` to execute.
@@ -110,44 +111,50 @@ Remove pending instincts older than 30 days (dry run by default). Use `--no-dry-
 
 ### Data Flow
 ```
-Tool calls --> observe.js (PreToolUse/PostToolUse hook)
-               |
-               |-> observations-structural.jsonl (metadata only, injection-safe)
-               |-> observations-content.jsonl (full I/O, secrets scrubbed)
-                                    |
+Tool calls ──→ observe.js (PreToolUse/PostToolUse hook)
+               │
+               ├──→ observations-structural.jsonl (metadata only, injection-safe)
+               └──→ observations-content.jsonl (full I/O, secrets scrubbed)
+                                    │
                      observer-analyze.js (Stop hook)
                      checks: 50+ new obs AND 30min cooldown
-                                    |
+                                    │
                      Spawns: claude --print --model opus
                      Reads observations, writes instinct .md files
-                                    |
+                                    │
                      homunculus/instincts/<project-id>/*.md
-                                    |
-                     /evolve --> clusters --> skills
-                     /wisdom --> cross-reference --> recommendations
+                                    │
+                     /wisdom (primary, human-driven, Fridays)
+                       ──→ skill enhancements, new skills, CLAUDE.md edits
+                     /evolve generate (fallback, mechanical)
+                       ──→ SKILL.md scaffolds in .claude/homunculus/evolved/skills/
 ```
+
+**`project-id` is repo-stable**: keyed off `git remote get-url origin` (normalized), not cwd. Worktrees, case-variant paths, and isolated subagents all share one `project_id` per repo.
+
+**Graduation path**: `/wisdom` is the primary mechanism — it reads instincts + CLAUDE.md + all skill descriptions and proposes where each instinct should land. `/evolve generate` is a mechanical fallback that produces minimal SKILL.md scaffolds from clusters; its output dir (`evolved/skills/`) is expected to be empty in normal operation. See `/observer-ops` § Graduation path if available.
 
 ### Directory Layout
 
 ```
 <repo>/
-|-- .claude/
-|   |-- scripts/
-|   |   |-- observe.js              # Hook: logs tool calls to JSONL
-|   |   |-- observer-analyze.js     # Hook: triggers analysis at threshold
-|   |   |-- instinct-cli.js         # CLI: list/evolve/prune/status
-|   |-- homunculus/                  # Observation data (gitignored)
-|       |-- projects.json            # Project registry
-|       |-- analysis-log.jsonl       # Analysis run history
-|       |-- projects/<hash>/
-|           |-- observations-structural.jsonl
-|           |-- observations-content.jsonl
-|           |-- .last-analysis       # Timestamp marker
-|           |-- .analysis-prompt.md  # Last analysis prompt
-|-- homunculus/                      # Generated instincts (gitignored)
-    |-- instincts/<project-id>/
-        |-- build-verify-after-edits.md
-        |-- prefer-edit-over-write.md
+├── .claude/
+│   ├── scripts/
+│   │   ├── observe.js              # Hook: logs tool calls to JSONL
+│   │   ├── observer-analyze.js     # Hook: triggers analysis at threshold
+│   │   └── instinct-cli.js         # CLI: list/evolve/prune/status
+│   └── homunculus/                  # Observation data (gitignored)
+│       ├── projects.json            # Project registry
+│       ├── analysis-log.jsonl       # Analysis run history
+│       └── projects/<hash>/
+│           ├── observations-structural.jsonl
+│           ├── observations-content.jsonl
+│           ├── .last-analysis       # Timestamp marker
+│           └── .analysis-prompt.md  # Last analysis prompt
+└── homunculus/                      # Generated instincts (gitignored)
+    └── instincts/<project-id>/
+        ├── build-verify-after-edits.md
+        └── prefer-edit-over-write.md
 ```
 
 ### Why two directories?
@@ -166,7 +173,6 @@ confidence: 0.7  # 0.3-0.9
 domain: code-style|testing|git|debugging|workflow|file-patterns
 source: session-observation
 scope: project|global
-status: pending  # pending|covered|promoted|evolved|contradicted|pruned
 project_id: 12-char-hash
 project_name: project-name
 created: YYYY-MM-DD
@@ -202,10 +208,10 @@ Runs as async PreToolUse/PostToolUse hook. Reads tool call JSON from stdin, writ
 - **Content** (full I/O): complete tool input/output with secrets scrubbed. For manual review only.
 
 Features:
-- Secret scrubbing (API keys, tokens, passwords, connection strings)
+- Secret scrubbing (API keys, tokens, passwords, connection strings, DB URLs)
 - Truncation (3KB per field)
 - Auto-rotation at 10MB per file
-- Project identification via git remote hash
+- Project identification via git remote hash (normalized: SSH vs HTTPS collapse to same ID)
 - Recursion guard (`ECC_SKIP_OBSERVE=1`)
 
 ### observer-analyze.js — Analysis Trigger
@@ -224,7 +230,7 @@ Configuration constants:
 |----------|---------|---------|
 | `OBSERVATION_THRESHOLD` | 50 | Minimum new observations before analysis |
 | `ANALYSIS_COOLDOWN_MS` | 30 min | Minimum time between analyses |
-| `MAX_OBSERVATIONS_TO_ANALYZE` | 200 | Cap on observations per analysis |
+| `MAX_OBSERVATIONS_TO_ANALYZE` | 200 | Cap on observations per analysis (controls prompt size) |
 
 ### instinct-cli.js — Management CLI
 
@@ -235,8 +241,8 @@ Searches for instincts in both `.claude/homunculus/` (legacy) and `homunculus/in
 ## Platform Notes
 
 ### Windows
-- `spawn('claude')` fails with ENOENT because Node.js can't resolve `claude.cmd` without a shell. Use `shell: true` in spawn options.
-- Add `windowsHide: true` to prevent cmd.exe windows from flashing open.
+- `spawn('claude')` fails with ENOENT because Node.js can't resolve `claude.cmd` without a shell.
+- `observer-analyze.js` prefers direct `node cli.js` invocation over `claude.cmd` to avoid console windows.
 - Path separators are normalized to forward slashes in the analysis prompt.
 
 ### macOS / Linux
@@ -248,7 +254,13 @@ Hooks MUST be in the **project-level** settings file:
 ```
 ~/.claude/projects/<project-hash>/settings.json
 ```
-NOT in the repo's `.claude/settings.json` — that file is for permissions and project config, not hooks.
+NOT in the repo's `.claude/settings.json` — that file is for permissions and project config, not hooks. Claude Code reads hooks from the user-level project settings file.
+
+To find your project hash:
+```bash
+ls ~/.claude/projects/
+```
+Look for the directory matching your repo path (hyphens replace path separators).
 
 ## Troubleshooting
 
@@ -260,21 +272,23 @@ NOT in the repo's `.claude/settings.json` — that file is for permissions and p
 ### Analyses running but no instincts generated
 - **Most likely**: Claude CLI can't write to `.claude/` — instincts must go to `homunculus/` at repo root
 - Check analysis log: `tail .claude/homunculus/analysis-log.jsonl`
-- Check the analysis prompt for correct write paths
+- Check the analysis prompt: verify the "write to" path is outside `.claude/`
 
 ### `spawn claude ENOENT` (Windows)
-- Ensure `shell: true` and `windowsHide: true` are set in spawn options
+- The script prefers direct `node path/to/cli.js` invocation; falls back to shell invocation
+- Ensure `shell: true` is set in the fallback spawn options
 
 ### Too many project hashes
 - Worktree agents create unique git remotes, generating separate project IDs
 - This is expected — each worktree's observations are independent
-- Use `/wisdom` weekly to deduplicate cross-hash instincts
+- The main project (matching your repo name) accumulates the most observations
 
 ## Workflow
 
 1. **Automatic**: Observations accumulate from normal Claude Code usage (every tool call)
-2. **Automatic**: When 50+ new observations accumulate, Opus analyzes and writes instincts
-3. **Manual**: `/evolve status` to check observation counts and instinct generation
-4. **Manual**: `/evolve list` to review generated instincts
-5. **Weekly**: `/wisdom` to cross-reference instincts against skills and CLAUDE.md
-6. **Manual**: `/evolve prune` to clean up stale pending instincts (30+ days old)
+2. **Automatic**: When 50+ new observations accumulate and 30min cooldown passes, Opus analyzes and writes instincts
+3. **Manual**: Run `/evolve status` to check observation counts and instinct generation
+4. **Manual**: Run `/evolve list` to review generated instincts
+5. **Manual**: Run `/evolve` to see evolution candidates (instinct clusters that could become skills)
+6. **Manual**: Run `/evolve generate` to create skills from high-confidence clusters
+7. **Manual**: Run `/evolve prune` to clean up stale pending instincts (30+ days old)

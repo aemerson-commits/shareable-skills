@@ -5,7 +5,19 @@ description: Adversarial implementation review. Dispatches independent reviewer 
 
 # Review Implementation
 
-Dispatch independent reviewer agents that read the actual code — not the implementer's summary. This catches the class of bugs where "it works in my head" doesn't match what was actually written.
+Dispatch independent reviewer agents that read the actual code — not the implementer's summary. This catches the class of bugs where "it works in my head" doesn't match what was actually written (auth bypass, buffer accumulation, etc.).
+
+## Persona
+
+Each reviewer agent should internalize these operating principles:
+
+> You are an adversarial code reviewer. You trust nothing — not the implementer's summary, not the commit message, not the variable names. You read the diff like you're hunting for a vulnerability that will wake someone up at 3am.
+>
+> You check: auth on every handler (can null slip through?), input validation at system boundaries, error messages that leak internals, null/undefined propagation through call chains, race conditions in async flows, and whether the test actually tests the claim.
+>
+> You do NOT soften findings to be polite. "This will crash in production when email is null" is better than "you might want to consider adding a null check here." If you find nothing wrong, say "no issues found" plainly — do not invent problems to justify your existence.
+>
+> You never rubber-stamp. If you didn't read the file, say so. If a path is untestable from the diff alone, flag it as UNVERIFIED, not PASS.
 
 ## Arguments
 
@@ -135,6 +147,21 @@ Review checklist:
    - No duplicated logic that should use shared utilities?
    - Clear variable/function names?
 
+5. STATE / TIMING / RACE (required if feature mutates DB, cache, or shared override state):
+   - Stale useMemo after setter: is a handler reading a memo derived from state it just set
+     in the same render tick? (pending-changes maps are the canonical trap)
+   - Re-entrancy: can the triggering control be clicked twice before state settles?
+     Is it disabled during pending?
+   - Effect re-fire: does any new useEffect watch state that the submit pipeline also
+     mutates? Does it have a guard?
+   - Cache invalidation: does this delete a cache key after a DB write that should NOT be
+     deleted (because enrichment runs at read-time)?
+   - Query invalidation: does handleRefresh cover ALL keys that depend on the mutated table?
+   - Override confirmation: compares ALL identifying fields, prefers server result?
+   - Safety timers: no blind-clear of pending state?
+   - Plan doc referenced (if one exists): did the plan's State/Timing/Race audit section
+     anticipate this hazard?
+
 Output format:
 ## Code Quality: PASS / ISSUES FOUND
 
@@ -230,7 +257,8 @@ Dispatch 1 agent (model: "opus"):
 **Agent E — Consumer Contract Reviewer**
 ```
 You are verifying that new/modified API responses match what frontend
-components actually read.
+components actually read. API changes that return correct data with wrong
+field names are a common source of subtle bugs.
 
 Changed files: [from Phase 1 — filter to API files]
 
@@ -243,13 +271,78 @@ Steps:
    - Map/filter callbacks: `.filter(s => s.status === 'active')`
    - Conditional checks: `if (item.field && item.otherField)`
 4. Compare: does every consumer field exist in the API response?
-5. Check: are field NAMES identical?
+5. Check: are field NAMES identical? (e.g., `process` vs `name`, `estMinutes` vs `duration`)
 6. Check: are field TYPES compatible? (string vs number, null vs undefined)
 
 Output:
 ## Consumer Contract: PASS / MISMATCHES FOUND
 | Consumer File | Field Read | API Field | Match? |
 |--------------|------------|-----------|--------|
+```
+
+### Phase 4c: Mutation Endpoint Audit (if feature involves toggles/modes)
+
+Skip if changes don't introduce alternative code paths or feature toggles.
+
+Dispatch 1 agent (model: "opus"):
+
+**Agent F — Mutation Audit**
+```
+You are auditing ALL mutation endpoints to verify they respect feature
+toggles. Toggle-guarded features often miss mutation endpoints that still
+call the old system.
+
+Steps:
+1. Identify the toggle mechanism (e.g., a KV flag, an env var, a config value)
+2. Grep ALL API handler files across ALL projects for mutation endpoints:
+   - POST/PUT/DELETE handlers
+   - External API calls
+   - Database writes
+3. For each mutation endpoint, check:
+   - Does it read the toggle?
+   - Does it have an alternative path for each toggle value?
+   - If no alternative exists, does it return 501 (not silently call the old API)?
+4. Check: are there validation steps that assume the OLD system?
+   (e.g., ID format checks that reject IDs from the new system)
+
+Output:
+## Mutation Audit: PASS / UNPROTECTED ENDPOINTS
+| Project | File | Endpoint | Has Toggle? | Issue |
+|---------|------|----------|-------------|-------|
+```
+
+### Phase 4d: Write Cycle Test (if feature involves mutations)
+
+Skip if changes are read-only.
+
+Dispatch 1 agent (model: "opus"):
+
+**Agent G — Write Cycle Tester**
+```
+You are testing the full write → cache invalidation → refresh → UI update cycle.
+Features that only test reads often ship write-side bugs.
+
+Steps:
+1. Identify all write operations in the changed code
+2. For each write operation, trace the full cycle:
+   a. Write: what endpoint? what body? what response shape?
+   b. Cache: does the write invalidate relevant cache keys?
+   c. Refresh: does the frontend trigger a refresh after write?
+   d. URL: is the refresh URL correctly constructed? (double ?, missing &)
+   e. Consumer: does the frontend match the response to update UI state?
+3. Test with curl:
+   a. POST the write
+   b. GET the read endpoint
+   c. Verify the written data appears in the read response
+4. Check edge cases:
+   - What happens if cache is empty during refresh? (graceful fallback?)
+   - What happens if the write succeeds but cache invalidation fails?
+   - What happens if the refresh returns stale data?
+
+Output:
+## Write Cycle: PASS / ISSUES FOUND
+| Operation | Write OK | Cache Invalidated | Refresh URL | Consumer Match |
+|-----------|----------|-------------------|-------------|----------------|
 ```
 
 ### Phase 5: Report
@@ -272,6 +365,8 @@ Present a concise summary:
 **Security:** PASS / X issues (Y fixed)
 **Visual:** PASS / X issues (deployed: yes/no)
 **Consumer Contracts:** PASS / X mismatches (if data shape changed)
+**Mutation Audit:** PASS / X unprotected (if toggles/modes involved)
+**Write Cycle:** PASS / X issues (if mutations involved)
 
 ### Issues Found & Resolved
 - [brief description of what was caught and fixed]

@@ -9,10 +9,14 @@ const { execSync } = require('child_process');
 // Guard: skip if we're inside an observer analysis to prevent recursion
 if (process.env.ECC_SKIP_OBSERVE === '1') process.exit(0);
 
-// Use project dir if available (travels with repo), fallback to user profile
-const HOMUNCULUS_DIR = process.env.CLAUDE_PROJECT_DIR
-  ? path.join(process.env.CLAUDE_PROJECT_DIR, '.claude', 'homunculus')
-  : path.join(process.env.USERPROFILE || process.env.HOME, '.claude', 'homunculus');
+// Derive project dir from this script's own location: <repo>/.claude/scripts/observe.js → <repo>
+// Falls back to CLAUDE_PROJECT_DIR env var, then user profile. The __dirname approach is
+// portable across machines and survives repo moves — no hardcoded paths needed.
+const SCRIPT_PROJECT_DIR = path.resolve(__dirname, '..', '..');
+const PROJECT_DIR = fs.existsSync(path.join(SCRIPT_PROJECT_DIR, '.claude'))
+  ? SCRIPT_PROJECT_DIR
+  : (process.env.CLAUDE_PROJECT_DIR || path.join(process.env.USERPROFILE || process.env.HOME));
+const HOMUNCULUS_DIR = path.join(PROJECT_DIR, '.claude', 'homunculus');
 const MAX_IO_LENGTH = 3000;
 const SECRET_PATTERNS = [
   /(?:api[_-]?key|token|secret|password|credential|auth)["\s:=]+["']?[A-Za-z0-9_\-./+=]{8,}/gi,
@@ -50,24 +54,52 @@ function rotateIfLarge(filePath, projectDir) {
   } catch {}
 }
 
-function getProjectId(cwd) {
+// Project identity is rooted in SCRIPT_PROJECT_DIR (derived from __dirname above),
+// NOT the hook's runtime cwd. Worktrees, case-variant cwds, and isolated subagent
+// dirs all resolve to the SAME main-repo path because settings.json points hooks at
+// the absolute path of this file. One repo → one project_id, forever.
+//
+// stdio:['ignore','pipe','ignore'] suppresses stderr cross-platform without a bash-ism
+// redirect (`2>/dev/null` literally fails under cmd.exe on Windows).
+let _cachedProjectId = null;
+let _cachedProjectName = null;
+function getProjectId() {
+  if (_cachedProjectId) return _cachedProjectId;
+  const crypto = require('crypto');
   try {
-    const remote = execSync('git remote get-url origin 2>/dev/null', { cwd, encoding: 'utf8' }).trim();
+    const remote = execSync('git remote get-url origin', {
+      cwd: SCRIPT_PROJECT_DIR, encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
     if (remote) {
-      const crypto = require('crypto');
-      return crypto.createHash('sha256').update(remote).digest('hex').slice(0, 12);
+      // Normalize remote URL so SSH vs HTTPS variants collapse:
+      //   git@github.com:org/repo.git  →  github.com/org/repo
+      //   https://github.com/org/repo  →  github.com/org/repo
+      const normalized = remote
+        .replace(/^git@([^:]+):/, '$1/')
+        .replace(/^https?:\/\//, '')
+        .replace(/\.git$/, '')
+        .toLowerCase();
+      _cachedProjectId = crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 12);
+      return _cachedProjectId;
     }
   } catch {}
-  // Fallback: hash the cwd
-  const crypto = require('crypto');
-  return crypto.createHash('sha256').update(cwd || 'unknown').digest('hex').slice(0, 12);
+  // Fallback: hash SCRIPT_PROJECT_DIR (stable, lowercased for case-insensitive filesystems)
+  _cachedProjectId = crypto.createHash('sha256').update(SCRIPT_PROJECT_DIR.toLowerCase()).digest('hex').slice(0, 12);
+  return _cachedProjectId;
 }
 
-function getProjectName(cwd) {
+function getProjectName() {
+  if (_cachedProjectName) return _cachedProjectName;
   try {
-    return path.basename(execSync('git rev-parse --show-toplevel 2>/dev/null', { cwd, encoding: 'utf8' }).trim());
+    _cachedProjectName = path.basename(execSync('git rev-parse --show-toplevel', {
+      cwd: SCRIPT_PROJECT_DIR, encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim());
+    return _cachedProjectName;
   } catch {}
-  return path.basename(cwd || 'unknown');
+  _cachedProjectName = path.basename(SCRIPT_PROJECT_DIR);
+  return _cachedProjectName;
 }
 
 // Read JSON from stdin
@@ -77,8 +109,8 @@ process.stdin.on('end', () => {
   try {
     const input = JSON.parse(Buffer.concat(chunks).toString());
     const cwd = input.cwd || process.cwd();
-    const projectId = getProjectId(cwd);
-    const projectName = getProjectName(cwd);
+    const projectId = getProjectId();
+    const projectName = getProjectName();
 
     // Determine event type from hook context
     const hookEvent = input.hook_event_name || (input.tool_response !== undefined ? 'tool_complete' : 'tool_start');

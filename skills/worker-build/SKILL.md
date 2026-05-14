@@ -6,16 +6,16 @@ user-invocable: true
 
 # Worker Build — Cloudflare Worker Factory
 
-Templated pipeline for building new Cloudflare Workers. Most workers follow the same pattern: cron-triggered, email delivery, recipient lists, admin UI, Bearer token auth on HTTP endpoints.
+Templated pipeline for building new Cloudflare Workers. Most workers follow the same pattern: cron-triggered, email delivery, KV recipient lists, admin UI in a settings panel, Bearer token auth on HTTP endpoints.
 
 ## Arguments
 
 - First argument (required): Worker name (e.g., "inventory-report", "shipping-alert")
 - `--type=email|monitor|sync` (default: email)
   - `email`: Cron-triggered email report (JWT email delivery, recipients, admin UI)
-  - `monitor`: API polling + alert on change (state tracking, threshold alerts)
-  - `sync`: Data synchronization (source → cache/DB, reconciliation)
-- `--cron=<schedule>` (e.g., "0 12 * * 1-5" for 8am ET weekdays during EDT)
+  - `monitor`: API polling + alert on change (KV state tracking, threshold alerts)
+  - `sync`: Data synchronization (source → KV/D1, reconciliation)
+- `--cron=<schedule>` (e.g., "0 12 * * MON-FRI" for 8am ET weekdays during EDT)
 
 ## Phase 0: Scope (Main Agent)
 
@@ -76,7 +76,7 @@ Must include:
 - Error handling with try/catch on cron, report errors to KV
 
 **Timezone rules for M-F cron workers:**
-- Cron schedules in `wrangler.toml` are UTC: `"0 12 * * 1-5"` = 8am EDT / 7am EST
+- Cron schedules in `wrangler.toml` are UTC: `"0 12 * * MON-FRI"` = 8am EDT / 7am EST
 - **DST**: EDT (Mar-Nov) uses `0 12`, EST (Nov-Mar) uses `0 13`. Pick one based on current date or accept the shift.
 - **If the worker code checks "is today a weekday?" (e.g. for weekend-skip logic), MUST use local day, not UTC:**
   ```js
@@ -179,6 +179,18 @@ Faster than sending test emails and digging through the inbox.
 
 ## Cron Trigger Verification (MANDATORY after any wrangler deploy or redeploy)
 
+> **CAVEAT: Numeric DOW is silently broken — the PUT [] / PUT [{cron}] heal is INSUFFICIENT**
+>
+> **Symptom**: A cron with any numeric day-of-week — range (`1-5`) or single day (`1`, `2`) — can appear correctly registered in `GET /schedules` (right cron string, fresh `modified_on`) yet silently never fire. The wipe-then-readd `PUT [] / PUT [{cron}]` cycle described below advances `modified_on` but does NOT restart the trigger. The worker stays dead.
+>
+> **Root cause**: CF's cron dispatcher silently discards numeric DOW at the internal scheduling layer. Only a syntactically-different cron string causes the dispatcher to re-parse and clear the stuck state.
+>
+> **The only confirmed heal**: change the literal cron string to use named days — `MON-FRI` instead of `1-5`, `MON` instead of `1`, `TUE` instead of `2` — then run the wipe-then-readd cycle with the renamed string.
+>
+> **Exception**: workers that branch on `event.cron` string-equality must keep the numeric literal that matches their code. Fix the equality branch in source first, then rewrite the cron string.
+>
+> **Rule for new workers: never use numeric DOW.** Always write `MON-FRI`, `MON`, `TUE`, etc.
+
 **Wrangler's `Deployed {name} triggers` output lies.** The message prints regardless of whether CF actually advanced the trigger registration. Silent cron failures are a real recurring pattern — triggers appear registered but never fire because wrangler no-ops when the cron string matches what CF already has stored.
 
 **The Cloudflare API is the source of truth.** After every `wrangler deploy` of a cron worker:
@@ -208,7 +220,7 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCT/workers/scri
 # Step 2: readd (match wrangler.toml crons exactly)
 curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCT/workers/scripts/{{your-worker}}/schedules" \
   -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
-  -d '[{"cron":"0 12 * * 1-5"}]'
+  -d '[{"cron":"0 12 * * MON-FRI"}]'
 ```
 
 After the PUT, `modified_on` and `created_on` both advance to the current time. This is the *only* way to heal a silently-stuck trigger registration.
@@ -219,6 +231,40 @@ After the PUT, `modified_on` and `created_on` both advance to the current time. 
 - A cron monitoring alert fires for a worker whose `wrangler deploy` just ran "successfully"
 
 **Post-deploy verification**: after PUT, the definitive evidence the trigger fires is a fresh success KV entry on the next scheduled run. Don't assume success from wrangler output alone.
+
+## Bulk Worker Redeploy Pattern
+
+For shared utility changes that affect many workers, redeploy in parallel rather than serially:
+
+### Procedure
+
+1. List affected workers:
+   ```bash
+   grep -rln 'shared/worker-utils\|shared/web-push' workers/ | xargs -n1 dirname | sort -u
+   ```
+
+2. Dispatch parallel deploys (one Bash call per worker, NOT a `for` loop — clearer per-worker failure isolation):
+   ```bash
+   cd workers/worker-a && npx wrangler deploy &
+   cd workers/worker-b && npx wrangler deploy &
+   # ... one line per worker
+   wait
+   ```
+
+3. Verify cron registration on each (CF API doesn't always advance `modified_on` on identical-cron redeploys):
+   ```bash
+   node scripts/verify-cron-coverage.mjs
+   ```
+
+4. Smoke-test each worker's HTTP endpoint with WORKER_AUTH_TOKEN to confirm a 200 (auth pass) + 401 (no auth) pair.
+
+### Why parallel-individual over for-loop
+
+- Per-worker failure visible in its own Bash tool result
+- Cancellation/retry of one worker doesn't disturb the others
+- Wrangler's per-worker cache state stays clean
+
+For large batches (e.g., 10-15 workers), expect 60-90 seconds total — sequential would take 4-5 minutes.
 
 ## Worker Type Templates
 
@@ -233,6 +279,6 @@ After the PUT, `modified_on` and `created_on` both advance to the current time. 
 - Threshold-based alerting (not every change, only significant ones)
 
 ### Sync
-- Cron → read source → transform → write to cache/DB → reconcile
+- Cron → read source → transform → write to KV/D1 → reconcile
 - Hash-based change detection
-- Rate limiting on mutations
+- Rate limiting on mutations (D1: batched)

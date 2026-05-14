@@ -78,6 +78,25 @@ Task 1 ──→ Task 3 ──→ Task 5 (verify)
 Task 2 ──→ Task 4 ──╱
 ```
 
+## Vertical Slicing (MANDATORY)
+
+**Each task/phase must deliver a testable end-to-end increment.** Never write phases like "all the backend first, then all the UI" — that produces plans where you can't verify anything until the last task lands.
+
+**Vertical slice** (good):
+- Task 1: "Add POST /api/items endpoint + one React form field + persist to DB + verify curl returns 200 and field renders"
+- Task 2: "Add GET /api/items?id=X + detail view in UI + verify round-trip"
+- Task 3: "Add delete + optimistic UI removal + verify"
+
+**Horizontal slice** (bad — avoid):
+- Task 1: "Build all 4 API endpoints"
+- Task 2: "Build all the DB schema"
+- Task 3: "Build the React components"
+- Task 4: "Wire them together"
+
+**Why**: horizontal slices stack risk at the end — the first 3 tasks "pass" but nothing actually works until Task 4. If Task 4 surfaces a design flaw, you redo all the earlier work. Vertical slices force integration issues to appear in Task 1 when they're cheap.
+
+**Exception**: schema migrations that multiple tasks depend on can be a standalone Task 0. That's the only horizontal slice allowed.
+
 ## Plan Quality Checklist
 
 Before presenting the plan to the user, verify:
@@ -86,11 +105,35 @@ Before presenting the plan to the user, verify:
 - [ ] **Code blocks are complete** — not "add error handling" but the actual try/catch
 - [ ] **Each task is independently verifiable** — has a verify step
 - [ ] **Scope per task is S or M** — break L tasks into smaller pieces
+- [ ] **Every phase is a vertical slice** — each one produces a testable end-to-end increment (see Vertical Slicing section above). No "all backend then all UI" plans.
 - [ ] **Parallel opportunities identified** — independent tasks marked for concurrent execution
 - [ ] **Constraints from research gate are respected** — no approach that was already eliminated
+- [ ] **"Always/Ask/Never" boundaries carried over** — if research-gate produced implementation boundaries, they're referenced or restated at the top of the plan
 - [ ] **Existing patterns followed** — uses shared utilities, matches codebase conventions
 - [ ] **Behavioral "Done When" criteria** — each task has at least one testable assertion (not just "build passes")
 - [ ] **Security considered** — auth checks, input validation, CORS for new endpoints
+- [ ] **State / timing / race audit done** — see section below. Skip only for pure read-only or cosmetic features.
+
+## State / Timing / Race Audit (MANDATORY for stateful features)
+
+Any feature that writes to a database, cache store, or shared state (e.g. a pending-changes map), or that triggers a refresh cycle, must pass this audit before the plan is approved. Silent races here have cost hours repeatedly. Explicitly address each row that applies — don't skip rows with "probably fine":
+
+| Hazard | What to check |
+|---|---|
+| **Stale `useMemo` after state setter** | If the plan calls a handler right after `setX`, will it read the pre-update memo? Solution: `pendingAction` flag + `useEffect`, or accept the staleness explicitly. |
+| **Cache invalidation after DB writes** | Does the write need to invalidate specific cache keys? Are there keys that must NOT be deleted because enrichment runs at read-time? |
+| **Query invalidation coverage** | Does `handleRefresh` (or equivalent) invalidate ALL data keys that depend on the mutated table? Missing any key causes stale renders. |
+| **Override confirmation** | If confirming a pending state, compare ALL identifying fields — not just one. Prefer server `result` over local data-driven string matching. |
+| **Safety timers** | Never blind-clear pending state on a timer — must only clean up drafts + release refs. |
+| **Re-entrancy / double-click** | Can the user click twice before state settles? Disable the triggering control while a pending flag is set. |
+| **Effect re-fire during pipeline churn** | Effects watching state that the submit pipeline also mutates need a guard (`if (modalOpen) return` or equivalent). |
+| **Chunk boundary collisions** | If chunked writes seed an index from `SELECT MAX(...)` server-side, ensure concurrent writes can't collide. |
+| **Draft autosave collisions** | New flows that mutate shared state should debounce with AbortController — don't duplicate if a shared pattern already exists. |
+| **Auth / identity** | Service-token requests need fallback identity; PIN gate is independent. Test both authed identities if your project has multiple auth paths. |
+| **DST / cron triggers** | Worker crons are UTC — season changes shift fire times. A deploy command may NOT remove registered crons; verify via API after deploy. |
+| **Secret-deploy-secret drift** | Rotating a secret via CLI can create deployments with OLD code — always follow with a full redeploy. |
+
+**How to use this:** In the plan document, add a short "State / Timing / Race audit" subsection that names each hazard that applies and the mitigation, or explicitly notes "N/A — feature is UI-local / read-only". Reviewers check this section exists.
 
 ## Execution Modes
 

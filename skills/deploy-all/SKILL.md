@@ -18,6 +18,8 @@ Configure your project table for your repo:
 | Project B | `project-b/` | `your-project-b-dev` | `your-project-b` | `Deploy B` |
 | Project C | `project-c/` | `your-project-c-dev` | `your-project-c` | `Deploy C` |
 
+**Source directory gotcha**: the CF Pages project name may differ from the source directory name. If your source dir name doesn't match the CF Pages project name, deploying from the wrong directory ships stale `functions/api/*.js` that breaks endpoints with 500s. Always match source dir to what your CI workflow uses.
+
 ## Steps
 
 ### 1. Detect Changed Projects

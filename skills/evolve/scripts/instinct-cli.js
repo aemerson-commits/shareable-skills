@@ -9,9 +9,24 @@
 
 const fs = require('fs');
 const path = require('path');
-const HOMUNCULUS_DIR = process.env.CLAUDE_PROJECT_DIR
-  ? path.join(process.env.CLAUDE_PROJECT_DIR, '.claude', 'homunculus')
-  : path.join(process.env.USERPROFILE || process.env.HOME, '.claude', 'homunculus');
+const { execSync } = require('child_process');
+
+// Resolve the project root: CLAUDE_PROJECT_DIR env var first, then git toplevel,
+// then cwd. The old fallback was USERPROFILE, which pointed at user-scope homunculus
+// and made `status` report empty observations for the current project.
+function resolveProjectRoot() {
+  if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
+  try {
+    return execSync('git rev-parse --show-toplevel', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString().trim().replace(/\//g, path.sep);
+  } catch {
+    return process.cwd();
+  }
+}
+const REPO_ROOT = resolveProjectRoot();
+const HOMUNCULUS_DIR = path.join(REPO_ROOT, '.claude', 'homunculus');
+// Instincts written outside .claude/ (Claude CLI can't write to .claude/)
+const INSTINCTS_DIR = path.join(REPO_ROOT, 'homunculus', 'instincts');
 const PRUNE_MAX_AGE_DAYS = 30;
 const PROMOTE_MIN_PROJECTS = 2;
 const PROMOTE_CONFIDENCE_THRESHOLD = 0.8;
@@ -81,6 +96,7 @@ function cmdList() {
   for (const pid of projects) {
     const projectInstincts = loadInstincts([
       path.join(HOMUNCULUS_DIR, 'projects', pid, 'instincts', 'personal'),
+      path.join(INSTINCTS_DIR, pid),
     ]);
     if (projectInstincts.length === 0) continue;
     let registry = {};
@@ -97,10 +113,10 @@ function cmdEvolve(options = {}) {
   const generate = options.generate || false;
   const allInstincts = [];
 
-  // Load all instincts
-  allInstincts.push(...loadInstincts([path.join(HOMUNCULUS_DIR, 'instincts', 'personal')]));
+  // Load all instincts (both legacy .claude/ path and new repo-root path)
+  allInstincts.push(...loadInstincts([path.join(HOMUNCULUS_DIR, 'instincts', 'personal'), INSTINCTS_DIR]));
   for (const pid of getAllProjects()) {
-    allInstincts.push(...loadInstincts([path.join(HOMUNCULUS_DIR, 'projects', pid, 'instincts', 'personal')]));
+    allInstincts.push(...loadInstincts([path.join(HOMUNCULUS_DIR, 'projects', pid, 'instincts', 'personal'), path.join(INSTINCTS_DIR, pid)]));
   }
 
   if (allInstincts.length === 0) {
@@ -157,7 +173,7 @@ function cmdEvolve(options = {}) {
   // Cross-project promotion candidates
   const idProjects = {};
   for (const pid of getAllProjects()) {
-    const instincts = loadInstincts([path.join(HOMUNCULUS_DIR, 'projects', pid, 'instincts', 'personal')]);
+    const instincts = loadInstincts([path.join(HOMUNCULUS_DIR, 'projects', pid, 'instincts', 'personal'), path.join(INSTINCTS_DIR, pid)]);
     for (const i of instincts) {
       if (!i.id) continue;
       if (!idProjects[i.id]) idProjects[i.id] = [];
@@ -247,13 +263,14 @@ function cmdStatus() {
   const globalInstincts = loadInstincts([
     path.join(HOMUNCULUS_DIR, 'instincts', 'personal'),
     path.join(HOMUNCULUS_DIR, 'instincts', 'pending'),
+    INSTINCTS_DIR,
   ]);
   totalInstincts += globalInstincts.length;
   console.log(`Global instincts: ${globalInstincts.length}`);
 
   // Per project
   for (const pid of projects) {
-    const instincts = loadInstincts([path.join(HOMUNCULUS_DIR, 'projects', pid, 'instincts', 'personal')]);
+    const instincts = loadInstincts([path.join(HOMUNCULUS_DIR, 'projects', pid, 'instincts', 'personal'), path.join(INSTINCTS_DIR, pid)]);
     totalInstincts += instincts.length;
 
     let obsCount = 0;

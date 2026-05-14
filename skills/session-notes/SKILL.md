@@ -10,7 +10,7 @@ user-invocable: true
 
 ## Obsidian CLI
 
-**Auto-detect**: Set `OBS` var based on which Obsidian binary exists on the system:
+**Auto-detect**: Set `OBS` var based on which binary exists:
 ```bash
 OBS="/c/Program Files/Obsidian/Obsidian.exe"
 [ ! -f "$OBS" ] && OBS="/c/Users/$USER/AppData/Local/Programs/obsidian/Obsidian.exe"
@@ -72,10 +72,13 @@ File: `{{project}}/Sessions/{YYYY-MM-DD}.md`
 "$OBS" append path="{{project}}/Sessions/{YYYY-MM-DD}.md" content="\n---\n\n## Session 2 — {topic}\n\n### What Was Done\n..." 2>&1 | grep -v "Loading\|out of date"
 ```
 
-**Set frontmatter properties** (after creating/updating):
-```bash
-"$OBS" property:set name="commits" value="[abc1234, def5678]" path="{{project}}/Sessions/{YYYY-MM-DD}.md" 2>&1 | grep -v "Loading\|out of date"
-"$OBS" property:set name="keywords" value="[timer, cache, deploy, bug-fix]" path="{{project}}/Sessions/{YYYY-MM-DD}.md" 2>&1 | grep -v "Loading\|out of date"
+**Set frontmatter properties** — Note: some Obsidian versions have a bug where `property:set` silently no-ops on externally-written files (confirmed in Obsidian 1.12.7). If this affects you, edit frontmatter directly with the Edit tool instead. Workaround: read the file, find the YAML frontmatter block between `---` delimiters, then Edit to update the values. Example:
+
+```yaml
+---
+commits: [abc1234, def5678]    # append new SHA to existing array
+keywords: [scheduler, deploy, bug-fix]  # merge with existing list
+---
 ```
 
 **Keywords**: Add 3-8 retrieval keywords per session — terms someone would search for later.
@@ -218,4 +221,4 @@ When the user says they're "closing up", "done for the day/night", or similar:
 - Use Edit tool only for repo-local files (memory/, CLAUDE.md)
 - Keep notes concise and actionable
 - Always include "Left Off" so the next session can resume quickly
-- Use frontmatter (`property:set`) to tag sessions for later querying
+- Use frontmatter to tag sessions for later querying (edit directly via Edit tool if `property:set` is broken — see Step 1)

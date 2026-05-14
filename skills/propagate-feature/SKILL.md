@@ -119,6 +119,22 @@ For each approved file:
 - {source}: PASS/FAIL (if modified)
 ```
 
+## Pre-Edit Divergence Check (MANDATORY)
+
+Before modifying a component that exists in both projects:
+1. Read the file in both projects
+2. Run `diff -u target/src/path source/src/path` to see divergence
+3. Identical sections — safe to change in both
+4. Diverged sections — require project-specific edits
+
+### CSS File Mapping
+
+Projects may store equivalent styles in different files:
+- Some projects use component-specific `.css` files (e.g., `FeatureModal.css`)
+- Others consolidate into `App.css`
+
+Always grep for class names in BOTH `App.css` AND component CSS files.
+
 ## Anti-Patterns
 
 - NEVER blindly copy entire files — always diff and apply hunks

@@ -59,7 +59,7 @@ Pass criteria: the new migration filename appears in the result. Empty result or
 ```bash
 # Use your platform's API to verify the schedule registration timestamp
 # For Cloudflare Workers, check the CF API schedules endpoint:
-ACCT_ID=<account-id>
+ACCT_ID=<cf-account-id>
 TOKEN=<oauth-token>
 curl -s -H "Authorization: Bearer ${TOKEN}" \
   "https://api.cloudflare.com/client/v4/accounts/${ACCT_ID}/workers/scripts/{{your-worker}}/schedules"
@@ -91,6 +91,28 @@ npx wrangler d1 execute {{your-d1-db}} --remote \
 ```
 
 Pass criteria: 200 from the endpoint AND a fresh row in the audit log. 200 alone doesn't prove the action happened — only the audit row does.
+
+### Shared-component scope claim ("affects X projects", "lands in project-a + project-b")
+
+When a change in `shared/` is described as touching multiple projects, verify each project actually *imports* the symbol — being in `shared/` means it's available, not that every project consumes it. Grep for the import before claiming scope:
+
+```bash
+# Find every project that imports the shared symbol (replace SymbolName)
+grep -rln "import.*SymbolName.*from.*shared\|from '@your-shared.*SymbolName" \
+  project-a/src/ project-b/src/ project-c/src/ --include="*.{js,jsx,ts,tsx}" \
+  2>/dev/null
+```
+
+Pass criteria: at least one import line per project named in the claim. Empty result for a named project = the change has no practical effect there, even though the file lives in `shared/`. Update the claim to match consumer reality before persisting it.
+
+### RBAC / permission claim ("X has access", "role granted")
+
+```bash
+npx wrangler d1 execute {{your-d1-db}} --remote \
+  --command="SELECT email, role, granted_at FROM user_roles WHERE email='<user>'"
+```
+
+Pass criteria: row exists with the expected role. Any KV fallback for auth must also be checked if D1 is empty.
 
 ### Multi-item completion ("X of Y items done")
 

@@ -56,7 +56,37 @@ git diff --stat HEAD~{N}  # where N = commit count from above
 "$OBS" search:context query="Next Steps|Left Off|Still on backlog" path="{{project}}/Sessions" limit=20 2>&1 | grep -v "Loading\|out of date"
 ```
 
-**Also review:** `memory/MEMORY.md` (repo), CLAUDE.md RESUME section (repo), `{{project}}/Learnings/` (vault).
+**Also review:** `memory/MEMORY.md` (repo), CLAUDE.md (repo), `{{project}}/Learnings/` (vault).
+
+**Real-User Monitoring (web-vitals) — past 7 days (if applicable):**
+
+If your project captures web-vitals from real users (e.g., in a D1 `rum_events` table), query them now:
+
+```bash
+npx wrangler d1 execute your-db --remote --command "SELECT project, message AS metric, COUNT(*) AS samples, ROUND(AVG(numeric_value), 1) AS avg_value FROM rum_events WHERE event_type = 'perf' AND received_at >= datetime('now', '-7 days') GROUP BY project, message ORDER BY project, message" --json
+```
+
+Compare each `avg_value` against the [web.dev/vitals](https://web.dev/vitals) thresholds:
+
+| Metric | Good | Needs Improvement | Poor |
+|--------|------|-------------------|------|
+| LCP | ≤2500ms | 2500–4000ms | >4000ms |
+| CLS | ≤0.1 | 0.1–0.25 | >0.25 |
+| INP | ≤200ms | 200–500ms | >500ms |
+| FCP | ≤1800ms | 1800–3000ms | >3000ms |
+| TTFB | ≤800ms | 800–1800ms | >1800ms |
+
+Flag any metric crossing into "needs improvement" or "poor" — and any metric that degraded vs the prior 7 days.
+
+**Error trends (if applicable):**
+
+If your project has an `event_log` table:
+
+```bash
+npx wrangler d1 execute your-db --remote --command "SELECT dashboard, category, status, COUNT(*) AS n FROM event_log WHERE eventType = 'error' AND createdAt >= datetime('now', '-7 days') GROUP BY dashboard, category, status ORDER BY n DESC" --json
+```
+
+Surface: total errors this week, top 3 categories by count, ratio of resolved/dismissed/still-new.
 
 ### 2. Generate Report
 
@@ -66,7 +96,7 @@ git diff --stat HEAD~{N}  # where N = commit count from above
 "$OBS" create path="{{project}}/Insights/{YYYY-MM-DD}.md" content="{report content}" 2>&1 | grep -v "Loading\|out of date"
 ```
 
-**Set frontmatter:**
+**Set frontmatter** (edit directly if `property:set` is broken in your Obsidian version):
 
 ```bash
 "$OBS" property:set name="type" value="insight" path="{{project}}/Insights/{YYYY-MM-DD}.md" 2>&1 | grep -v "Loading\|out of date"
@@ -103,9 +133,19 @@ Template:
 
 - Components: {count} views, {total lines}
 - Shared utilities: {function count}
-- Workers: {status}
+- Workers/services: {status}
 - Open vault tasks: {count from tasks todo}
 - Top tags: {from tags counts}
+
+## Real-User Monitoring (web-vitals)
+
+| Project | LCP | CLS | INP | FCP | TTFB | Samples | Status |
+|---------|-----|-----|-----|-----|------|---------|--------|
+| {project} | {avg ms} | {avg} | {avg ms} | {avg ms} | {avg ms} | {n} | good / needs-improvement / poor |
+
+**Anomalies vs prior week:** {list any metric that degraded by >20% or crossed a threshold band}
+
+**Errors logged this week:** {N total · X new · Y resolved · Z dismissed} — top categories: {list top 3}
 
 ## Recurring Unresolved Items
 

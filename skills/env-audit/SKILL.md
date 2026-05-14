@@ -101,6 +101,20 @@ npx wrangler pages secret delete UNUSED_VAR --project-name=your-project-dev
 
 If invoked with a specific project name (e.g., `/env-audit project-a`), only audit that one context instead of all projects.
 
+## CF Access AUD Pattern
+
+When using Cloudflare Access JWT verification, each Access Application has its own AUD (audience) value. Different apps must use their respective AUD values — using the wrong AUD causes silent JWT verification failures (generic 401, not a clear error).
+
+Keep AUD values documented per-app:
+```
+| App | .env Key |
+|-----|----------|
+| App A | CF_ACCESS_AUD_APP_A |
+| App B | CF_ACCESS_AUD_APP_B |
+```
+
+Verify by inspecting the CF Access redirect URL — the `kid=` param in the redirect URL encodes the AUD. Storing the raw AUD hash in your encrypted `.env` as a named key per-app is the safe pattern.
+
 ## Gotchas
 
 - `wrangler pages secret list` shows names only, not values — safe to run
@@ -108,3 +122,4 @@ If invoked with a specific project name (e.g., `/env-audit project-a`), only aud
 - Some env vars are accessed dynamically (e.g., `env[key]`) — won't be caught by static grep
 - KV/D1/R2 bindings come from config, not secrets — check both
 - Encrypted `.env` files need their decryption key to inspect — check your secrets manager
+- **`wrangler secret put` breaks deployments**: Secret changes create a new deployment using an older/incomplete code bundle. ALWAYS follow `wrangler secret put` with a full redeploy (Pages: `wrangler pages deploy dist`; Workers: `wrangler deploy`) from the project dir. Without this, API code silently reverts to a stale version

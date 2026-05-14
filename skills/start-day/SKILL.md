@@ -1,6 +1,6 @@
 ---
 name: start-day
-description: "Morning startup: git pull, session notes review, alerts check, ideas triage, and daily briefing"
+description: "Morning startup: git pull, QMD update, session notes review, alerts check, ideas triage, and daily briefing"
 user-invocable: true
 ---
 
@@ -20,7 +20,7 @@ All CLI commands: append `2>&1 | grep -v "Loading\|out of date"`
 
 ## Execution
 
-Run as many steps in parallel as possible. Steps 1-4 are fully independent — launch them all at once. Step 5 depends on reading results. Step 6 is the final briefing.
+Run as many steps in parallel as possible. Steps 1-4 and Step 8 (Event Log check) are fully independent — launch them all at once. Step 5 depends on reading results. Step 9 (briefing) is the final synthesis.
 
 ### Step 1 — Git Pull (parallel)
 
@@ -32,7 +32,10 @@ Note the files changed and summarize what came in (new features, fixes, docs, et
 
 ### Step 2 — Re-index (background, parallel)
 
-Run any project-specific re-indexing in background — don't wait for it.
+Run any project-specific re-indexing in background — don't wait for it. For example:
+```bash
+npx qmd update && npx qmd embed  # if using qmd for semantic search
+```
 
 ### Step 3 — Review Recent Session Notes (parallel, use Agent)
 
@@ -85,7 +88,25 @@ Check any pending infrastructure items from MEMORY.md alerts. For example:
 
 Report verified items and clear resolved alerts from MEMORY.md.
 
-### Step 8 — Friday Wisdom Check
+### Step 8 — Daily Event Log Review (if applicable)
+
+If your project has a cross-dashboard event log for errors and duplicates, surface unresolved items now. For example, if using a D1 `event_log` table:
+
+```bash
+# Query the event log for recent unresolved errors
+# (adapt to your project's error tracking setup)
+npx wrangler d1 execute your-db --remote --command \
+  "SELECT dashboard, category, contentSummary, createdAt FROM event_log WHERE eventType='error' AND status='new' ORDER BY createdAt DESC LIMIT 20" \
+  --json
+```
+
+**Surface in briefing:**
+- If no unresolved errors: report "Event Log: clear"
+- If errors exist: report count + top 3-5 as one-liners
+- Flag any items >7 days old as stale or backlogged
+- Don't auto-resolve — user reviews and marks Resolve / Acknowledge / Dismiss
+
+### Step 9 — Friday Wisdom Check
 
 Check if today is Friday:
 ```bash
@@ -112,7 +133,9 @@ Good morning! Here's your daily briefing:
 **Active alerts**:
 - alert 1
 - alert 2
+**Event Log**: clear / N new errors needing review (top 3-5 listed if >0)
 **Ideas inbox**: X items / clear
+**Skill health**: Last audit {date} — {pass/due for audit}. Top 3 used skills last 7 days: X, Y, Z
 **Recent gotchas**: Any new entries worth noting
 **Pending items**: Verified / needs attention
 

@@ -33,12 +33,31 @@ Backend API (Express/etc.)   <- Transforms: SQL -> JSON, joins, enrichment
     | HTTP
 API Proxy / Functions        <- Caching layer: KV with TTL, compression
     |
-Cache Layer (KV/Redis)       <- Cached data with TTL
+Cache Layer (KV/Redis)       <- Cached data with TTL, D1 enrichment at read time
     |
 Data Transform               <- Reshapes data for frontend consumption
     |
 React Component              <- Displays to user (may further filter/format)
 ```
+
+## Phase 0: Identifier Probe (do this BEFORE fanning out agents)
+
+Identifiers are often ambiguous — the same string may refer to different entities depending on context (e.g. an order number vs a job name vs a customer PO). **A single search call resolves this before wasting the full fan-out.**
+
+```bash
+# Use your backend's search endpoint to classify the identifier
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://{{your-app}}.example.com/api/search?q=<identifier>"
+```
+
+| Probe Result | Action |
+|---|---|
+| Matches expected entity type | Proceed to Phase 1 |
+| Matches a different entity type (e.g., job name not order number) | Pivot the trace to the true entity |
+| No matches anywhere | Ask the user what system they saw the identifier in — guessing wastes the fan-out |
+| Present in source but not on user's screen | SO is live; divergence is downstream — skip source agent, go straight to cache/frontend |
+
+**Only proceed to Phase 1 if Phase 0 confirms the identifier maps to a real entity and you've identified which layer is plausibly losing data.** Often Phase 0 alone resolves the question.
 
 ## Phase 1: Parallel Layer Sampling (4 Agents, model: "opus")
 
@@ -65,10 +84,12 @@ Find the cached data for [identifier].
 
 1. Identify which cache key would contain this item
 2. Read transform logic to understand how source data is reshaped
-3. Check sync/refresh code to understand how source data maps to cache
+3. Check enrichment code — what overlays are applied at read time?
+   (e.g. D1 enrichment layers: assignment data, status overrides, synthetic cards)
+4. Check sync/refresh code to understand how source data maps to cache
 
 Document: what the cache SHOULD contain based on the transform logic.
-Flag any transformations that could lose or alter data.
+Flag any enrichment step that could mask, collapse, or filter the identifier.
 
 Output:
 | Field | Expected Cache Value | Transform Applied | Potential Issue |
@@ -100,6 +121,7 @@ Find the API response for [identifier].
 2. Trace: does it hit cache first? What's the TTL?
 3. If cache miss: what endpoint does it call? What transform happens?
 4. Check: does the API apply any filtering, sorting, or enrichment?
+5. Check: is any feature-gate mode active that blocks live data?
 
 If possible, construct the exact curl command that would fetch this item's data.
 
@@ -126,26 +148,29 @@ Compile all 4 agents' field-level reports into a single comparison matrix:
 For each MISMATCH:
 1. **Field**: [name]
 2. **Diverges at**: [which layer boundary]
-3. **Root cause**: [stale cache / transform bug / sync lag / display formatting]
+3. **Root cause**: [identifier ambiguity / stale cache / transform bug / sync lag / display formatting]
 4. **Fix**: [specific action]
 
 ### Common Root Causes
-- **Stale cache**: TTL hasn't expired, data changed in source. Fix: wait for TTL or invalidate
-- **Sync lag**: Background sync runs at intervals, item was just changed. Fix: trigger manual sync
-- **Transform bug**: Transform logic drops/alters a field. Fix: update transform
-- **Display formatting**: Component formats differently than expected. Fix: update formatter
-- **Timezone shift**: ISO date parsed as UTC, displayed as local -> off by 1 day. Fix: parse as local
-- **Compression mismatch**: Reading compressed cache without decompression returns garbage
+- **Identifier ambiguity**: User's ID maps to a different entity than expected. Fix: resolve via Phase 0 probe and pivot the trace to the true entity.
+- **WHERE filter drop**: Records vanish when a backend query filters by status, warehouse, process completion, or quantity shipped. Fix: confirm via completions endpoint or direct search.
+- **Record absorption**: Enrichment logic consolidates N records into one summary card. Downstream sees 1 record not N. Fix: this is often intentional — drill into the summary record's child array.
+- **Stale cache**: TTL hasn't expired, data changed in source. Fix: wait for TTL or invalidate.
+- **Transform/enrichment bug**: Enrichment code drops/alters a field. Fix: update enrichment.
+- **Frontend filter**: Active user filters (status, machine, assignee, date range) hide the record. Fix: identify which filter and either correct upstream state or change the user's active selection.
+- **Display formatting**: Component formats differently than expected. Fix: update formatter.
+- **Timezone shift**: ISO date parsed as UTC, displayed as local -> off by 1 day. Fix: parse as local.
+- **Compression mismatch**: Reading compressed cache without decompression returns garbage. Fix: use the correct cache utility.
 ```
 
 ## Phase 3: Fix Recommendation
 
 Based on the divergence analysis:
-1. If **stale cache**: Suggest cache invalidation or TTL adjustment
-2. If **sync lag**: Suggest manual sync trigger
-3. If **transform bug**: Identify the exact line and suggest fix
-4. If **display error**: Identify the component and formatter
-5. If **source data wrong**: Flag as "source data issue — check directly"
+1. If **identifier ambiguity**: Restart the trace using the resolved entity (from Phase 0 probe). Often the original "missing data" is actually present under a different ID.
+2. If **stale cache**: Suggest cache invalidation or TTL adjustment.
+3. If **transform/enrichment bug**: Identify the exact line and suggest fix.
+4. If **frontend filter**: Identify the component, the filter condition, and whether the upstream data or the user's selection needs to change.
+5. If **source data wrong**: Flag as "source data issue — check directly in source system".
 
 ## Escalation
 

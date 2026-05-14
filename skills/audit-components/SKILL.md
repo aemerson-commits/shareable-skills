@@ -131,6 +131,15 @@ Zero results = all instances updated. Any remaining hits = missed site. Fix befo
 
 This is the post-edit equivalent of the pre-edit consumer scan — both are required for complete coverage. Running only the pre-edit scan leaves a gap for files created or modified after your initial grep.
 
+## UI Label Audits
+
+When hiding or renaming a UI label, the same text is often rendered in **multiple places**: sidebar, main header, document title, tab labels, tooltip titles, breadcrumbs. Fixing one site and shipping leaves the others leaking.
+
+**Before claiming a label change is done:**
+1. `grep -rn '"YourLabel"' src/` — find ALL render sites
+2. Check any default-fallback code paths that humanize a route ID (e.g. `activeView.charAt(0).toUpperCase() + activeView.slice(1)` turns `admin` → `"Admin"` for free, bypassing any lookup map)
+3. **Visual verification is mandatory** — HTTP 200 and unit tests don't prove what the user sees
+
 ## When to Use
 - After modifying shared utilities or constants
 - After adding/removing props from a component

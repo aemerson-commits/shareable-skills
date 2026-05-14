@@ -1,6 +1,6 @@
 {
   "name": "shareable-skills",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "description": "46 Claude Code skills + continuous learning pipeline — development pipeline, build orchestration, diagnostic escalation, document generation, creative tools, session management, skill maintenance, and automated pattern extraction. Built on parallel agent teams.",
   "author": "aemerson-commits",
   "skills": [

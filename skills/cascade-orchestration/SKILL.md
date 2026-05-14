@@ -140,10 +140,10 @@ The screenshot directory becomes the audit trail for the deploy. Archive it alon
 | Workflow | Pattern | Agents |
 |----------|---------|--------|
 | `/start-day` | Fan-Out/Fan-In | 4 parallel: git pull, index, session review, memory check |
-| `/research-gate` | Fan-Out/Fan-In | 4 parallel research agents → synthesis |
+| `/research-gate` | Fan-Out/Fan-In | 4-5 parallel research agents → synthesis |
 | `/audit-components` | Per-Project Propagation | N project auditors + cross-project auditors |
 | `/env-audit` | Fan-Out/Fan-In | N context scanners → cross-reference synthesis |
-| `/review-impl` | Sequential Pipeline | 3 context agents → 3 reviewers → synthesis |
+| `/review-impl` | Sequential Pipeline | 3 context agents → 3-7 reviewers → synthesis |
 | `/pre-merge-review` | Cascading Sub-Teams | 5 domains x 1-3 sub-agents each (up to 12 total) |
 | `/deploy-all` | Per-Project Propagation + Conditional | N Pages agents, then Worker agents |
 | `/session-notes` | Fan-Out/Fan-In + Conditional | 5 parallel: vault, docs, help, memory, tracker |

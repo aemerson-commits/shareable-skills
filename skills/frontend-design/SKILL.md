@@ -184,6 +184,12 @@ Use a consistent `KPICard` component for metric cards across all projects:
 />
 ```
 
+If your project uses shared chart constants, prefer importing them:
+```jsx
+import { CHART_TOOLTIP } from '@your-shared/constants'
+<Tooltip {...CHART_TOOLTIP} />
+```
+
 - Bundle split: Recharts in `manualChunks` (vite.config.js) — always preserve
 - ResponsiveContainer: `height={isMobile ? 200 : 250}` standard
 
@@ -198,7 +204,7 @@ Use a consistent `KPICard` component for metric cards across all projects:
 
 Use a shared modal component with:
 - Focus trap (`useModalA11y` or native `<dialog>` + `showModal()`)
-- Overlay-click-to-close: `if (e.target === e.currentTarget) onClose()` on the overlay
+- Overlay-click-to-close: `if (e.target === e.currentTarget) onClose()` on the overlay — do NOT use `stopPropagation` on inner content (breaks child portals)
 - Backdrop: `rgba(0, 0, 0, 0.5)` with optional blur
 - Escape key close
 - Scroll lock on body while open
@@ -268,7 +274,12 @@ After `/design-showcase` and the user picks a variant, porting it into the real 
 - **Recharts bundle**: Split via `manualChunks` in vite.config.js — always keep this config
 - **Dropdown in scrollable tables**: `position:fixed` + `getBoundingClientRect()` — `absolute` gets clipped by `overflow-x:auto`
 - **localStorage validation**: Cross-reference saved columns against `DEFAULT_COLUMNS` to filter stale entries
+- **getDueDateCategory "this week" filter**: must include `late + today + tomorrow + thisWeek` (not just `thisWeek`)
 - **ISO date timezone shift**: `new Date('2026-03-20')` → midnight UTC → day before in local timezone. Fix: parse YYYY-MM-DD as `new Date(year, month-1, day)` for local display. Don't round-trip already-ISO strings through `toISOString()`
+- **Unstable array/object deps + AbortController = infinite loop**: When a `useEffect` depends on a prop-derived array (e.g. `const ids = idsProp || []`) and the parent passes a fresh literal each render, the effect re-fires every render. If that effect creates an `AbortController` with a cleanup that calls `abort()`, every render aborts the in-flight fetch. Symptom: modal stuck on "Loading..." forever, network panel shows `canceled` requests in a tight loop. `react-hooks/exhaustive-deps` does NOT catch it — the dep is listed correctly, just unstable. Fix: memoize the derived value against a primitive key (e.g. `array.join('|')`) or have the parent wrap in `useMemo`.
+- **CSS shorthand vs longhand override**: `overflow: hidden` (shorthand) is NOT reliably overridden by a later `overflow-y: auto` (longhand) in some cascade scenarios. Use the matching shorthand (`overflow: hidden auto`) to override. Also: `overflow-y: auto` is a no-op when the container has `min-height` instead of `height`; `min-height` is ignored on `<td>` elements per CSS spec.
+- **Flex scroll chain requires every ancestor to be a flex container**: For `overflow-y: auto` on a deeply nested element to work, every ancestor must be `display: flex; flex-direction: column` with `min-height: 0` (or `height: 0`). One plain block container breaks `flex: 1` on its children — content overflows without constraint.
+- **CSS pattern audit before adding styles**: Before adding `@keyframes` or new CSS classes to a large `App.css`, grep existing patterns first to avoid duplicate keyframes and conflicting class names.
 
 ## See Also
 

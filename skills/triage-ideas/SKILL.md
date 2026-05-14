@@ -75,7 +75,8 @@ If using a database for roadmap tracking (e.g., D1, SQLite), batch ALL ideas int
 cat > tmp-ideas.sql << 'EOSQL'
 INSERT INTO roadmap_items (id, title, description, project, status, createdDate, createdBy, updatedAt, updatedBy, estimatedTime)
 VALUES
-('idea-xxx', 'Title 1', 'Description. Priority: Medium.', 'your-project', 'planned', 'YYYY-MM-DD', 'claude', 'YYYY-MM-DDTHH:MM:SSZ', 'claude', 'Medium');
+('idea-xxx', 'Title 1', 'Description. Priority: Medium.', 'your-project', 'planned', 'YYYY-MM-DD', 'claude', 'YYYY-MM-DDTHH:MM:SSZ', 'claude', 'Medium'),
+('idea-yyy', 'Title 2', 'Description. Priority: Low.', 'your-project', 'planned', 'YYYY-MM-DD', 'claude', 'YYYY-MM-DDTHH:MM:SSZ', 'claude', 'Large');
 EOSQL
 
 # Execute against your database(s)
@@ -88,6 +89,23 @@ rm tmp-ideas.sql
 
 For items routed to other projects, use the Edit tool on:
 `{{vault_path}}/{Project}/Roadmap.md`
+
+If no Roadmap.md exists, create one with the Write tool:
+```markdown
+---
+type: roadmap
+last_updated: {today}
+---
+
+# {Project} — Roadmap
+
+## Backlog
+
+| Priority | Item | Notes | Effort |
+|----------|------|-------|--------|
+
+## Completed
+```
 
 ## Step 4 — Clear the inbox
 
@@ -121,7 +139,8 @@ Ideas inbox cleared.
 ## Gotchas
 
 - **Obsidian CLI has NO edit command** — always use Read + Edit tools on full file paths
-- **Batch database inserts** — combine all ideas into one SQL file
+- **Batch database inserts** — combine all ideas into one SQL file, run against all environments
+- **Database has no priority column** — encode priority in the description text if needed
 - **Dedup check** — search the roadmap for similar items before adding duplicates
 - **Immediate vs Long-Term** — actionable items with clear scope go to Immediate Backlog; exploratory/meta/tooling ideas go to Long-Term Ideas
 - **Clean up tmp files** — always remove temp SQL files after execution

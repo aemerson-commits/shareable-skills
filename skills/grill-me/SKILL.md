@@ -46,13 +46,13 @@ Walk these branches in order, but skip any that are obviously answered by contex
 ### 2. Success Criteria
 - What does "working" look like? Paint the picture.
 - How will you know it's done? What's the minimum viable version?
-- Is there an existing process this replaces? (Excel, phone call, email, manual workflow)
+- Is there an existing process this replaces? (spreadsheet, phone call, email, manual workflow)
 
 ### 3. Data Source & Shape
-- Where does the data come from? (database, API, cache, manual entry)
+- Where does the data come from? (internal database, external API, cache, manual entry)
 - How fresh does it need to be? (real-time, cached, daily, weekly)
 - What are the key fields? What's the primary identifier?
-- Are there edge cases in the data? (duplicates, nulls, special formats)
+- Are there edge cases in the data? (duplicates, nulls, cancelled records, zero-quantity lines)
 
 ### 4. Interaction Model
 - Is this a dashboard (view-only), a tool (input/output), or a workflow (multi-step)?
@@ -63,7 +63,7 @@ Walk these branches in order, but skip any that are obviously answered by contex
 ### 5. Integration Points
 - Does this connect to existing views/features? Which ones?
 - Does it need a new API endpoint, or can it reuse existing ones?
-- Does it need new database tables or cache keys?
+- Does it need new database tables, cache keys, or external service columns?
 - Does it interact with external systems?
 
 ### 6. Edge Cases & Risks

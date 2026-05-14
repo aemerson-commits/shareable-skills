@@ -14,7 +14,7 @@ When the user asks to create a presentation, slides, deck, or similar. Examples:
 
 ## Output
 
-A single `.html` file saved to the user's specified location (default: `C:/tmp/slides/`). The file is self-contained and can be opened directly in any browser.
+A single `.html` file saved to the user's specified location (default: a temp or output directory). The file is self-contained and can be opened directly in any browser.
 
 ## Design Principles
 

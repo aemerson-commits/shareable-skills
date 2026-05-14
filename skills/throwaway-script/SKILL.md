@@ -8,7 +8,7 @@ user-invocable: false
 
 ## When to use
 
-Use this pattern for a single-shot script that needs `process.env.*` from `.env`. Examples: probe an API for a specific response shape, hit a cloud provider's API to verify a resource is registered, run a one-off database calibration query, inspect a KV/cache key, verify a deploy is live.
+Use this pattern for a single-shot script that needs `process.env.*` from `.env`. Examples: probe an API for a specific response shape, hit a cloud provider's API to verify a resource is registered, run a one-off database calibration query, inspect a cache key, verify a deploy is live.
 
 **Not for:**
 - Persistent tooling → build a Worker / service / CLI instead

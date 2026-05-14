@@ -33,12 +33,12 @@ npx wrangler d1 execute <db-name> --remote --command="PRAGMA table_info(<table>)
 
 ### 2. KV Key Pattern Check
 
-Document your common key patterns:
+Document your common key patterns. Example patterns:
 ```
 orders-cache              — Order data (may be compressed)
 machines-cache            — Machine definitions
 draft:{email}:{operation} — User drafts (7-day TTL)
-data-source-toggle        — Feature toggle
+feature-toggle:{name}     — Feature toggles
 worker-last-success.*     — Worker health tracking
 worker-last-error.*       — Worker error tracking
 recipients-{feature}      — Email recipients
@@ -46,7 +46,7 @@ recipients-{feature}      — Email recipients
 
 ```bash
 # List KV keys matching a pattern
-npx wrangler kv key list --namespace-id=YOUR_KV_NAMESPACE_ID --prefix="<pattern>" | head -20
+npx wrangler kv key list --namespace-id=<kv-id> --prefix="<pattern>" | head -20
 ```
 
 ### 3. Binding Verification
@@ -57,7 +57,7 @@ cat <project>/wrangler.toml  # Pages projects may not have this — check CF das
 cat workers/<worker>/wrangler.toml
 ```
 
-Common bindings:
+Common binding types:
 - `CACHE` — KV namespace
 - `ADMIN_DB` — D1 database
 - `API_URL` — Backend API URL

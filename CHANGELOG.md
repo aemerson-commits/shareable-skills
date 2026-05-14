@@ -1,5 +1,52 @@
 # Changelog
 
+## 5.1.0 (2026-05-14)
+27 skill updates synced from internal source, sanitized to match v5.0.0 precedent. +772 / -205 lines.
+
+### Development Pipeline
+- `/research-gate` — added Persona block (scout mindset, anti-premature-commitment), new State/Timing/Race Hunt 5th agent, Implementation Boundaries block (ALWAYS/ASK/NEVER) in Phase 2 output template
+- `/write-plan` — added Vertical Slicing section with good/bad examples, expanded State/Timing/Race Audit table (12 hazard rows), Always/Ask/Never carry-forward checklist item
+- `/review-impl` — added full Persona block, new Phase 4c (Mutation Audit / Agent F) + Phase 4d (Write Cycle Test / Agent G), expanded Agent B with State/Timing/Race checklist
+- `/grill-me` — tightened data-source question branch (generic DB/API/cache pattern)
+- `/cascade-orchestration` — updated research-gate / review-impl agent counts (4→4-5, 3→3-7)
+- `/debug-collaborate` — generalized React fiber-walk field-name example
+
+### Build Orchestration
+- `/worker-build` — added numeric-DOW caveat (named-days-only rule, `MON-FRI`/`MON`/`TUE` requirement), bulk-redeploy pattern, `node --check` syntax-check pattern, cron trigger re-registration recipe
+- `/propagate-feature` — added Pre-Edit Divergence Check + CSS File Mapping subsection
+- `/deploy-all` — added source directory gotcha warning
+
+### Quality & Verification
+- `/verify-complete` — added 2 new recipes: Shared-component scope claim + RBAC/permission claim (now 10 recipes)
+- `/pre-merge-review` — added soft-default recommendation for 3+ project commits, two new SQL discipline rules (don't repurpose semantic tables; D1 write counter discipline), Section 5b A11y onClick guidance
+- `/env-audit` — added CF Access AUD-per-app pattern, `wrangler secret put` redeploy gotcha
+- `/audit-components` — added UI Label Audits section with charAt-fallback gotcha
+- `/data-reconciliation` — added Phase 0 Identifier Probe (probe-before-fanout pattern), Verification Tooling patterns, identifier ambiguity + WHERE filter drop + record absorption added to Common Root Causes
+- `/frontend-design` — added tactical patterns: unstable array deps + AbortController infinite loop, CSS shorthand vs longhand override, flex scroll chain requires every ancestor flex, CSS pattern audit before adding styles, modal overlay-click Pattern 1 vs Pattern 2
+- `/schema-check` — placeholders for KV namespace ID and DB names
+
+### Session Management
+- `/start-day` — added Step 8 (Event Log Review with D1 query example), Step 9 (Friday Wisdom Check)
+- `/session-notes` — `property:set` bug workaround (Obsidian 1.12.7 silent no-op), generalized vault paths
+- `/insight` — added RUM/web-vitals section with threshold table
+- `/triage-ideas` — added Roadmap.md scaffolding template
+
+### Skill Maintenance & Learning
+- `/skill-audit` — Check 6 uses auto-detecting CLI (no `CLAUDE_PROJECT_DIR` prefix needed), added SKILL.md Artifacts section
+- `/evolve` — auto-detect project-root, Windows headless spawn improvement, 3 scripts updated (git-based project root resolution, direct `node cli.js` spawn, improved path derivation)
+- `/wisdom` — tiered-approval architecture (Tier 1/2/3) with safety note and `status` schema table
+
+### Reference & Conventions
+- `/model-selection` — generic skill-type categories table
+- `/throwaway-script` — replaced project-specific examples with generic cloud-API-probe + OAuth-token + database-probe shapes
+
+### Misc
+- `/html-slides` — generic slide-output default path, removed brand-color specifics
+- `/worktree-guard` — generic API handler files in conflict patterns
+
+### Skipped (already current after v5.0.0 sanitization)
+- `webapp-testing`, `docx`, `full-stack-build`, `persistent-issue`, `deep-root-cause`, `full-stack-trace`, `isolation-test`, `temporal-forensics`, `regression-bisect`, `skill-creator`, `pdf`, `xlsx`, `mcp-builder`, `internal-comms`, `algorithmic-art`, `canvas-design`, `slack-gif-creator`, `theme-factory`, `web-artifacts-builder` — no behavioral changes since v5.0.0; existing sanitized versions remain current
+
 ## 5.0.0 (2026-04-27)
 - Added `/model-selection` — per-agent model dispatch guide (Sonnet floor, Opus for critical review, effort-tier ladder)
 - Added `/throwaway-script` — pattern for one-shot `.mjs` Node scripts that need `.env` secrets (location, ESM form, Windows path quirks)
