@@ -34,6 +34,19 @@ Deeply question the user about their idea before any code or research begins. Wa
 
 **Self-service when possible.** If a question can be answered by reading the codebase, session notes, or memory files — answer it yourself instead of asking the user. Tell them what you found and ask if it's correct.
 
+## Project Glossary
+
+If your project maintains a domain glossary (a file that pins down what overloaded terms mean — shared identifiers, record types, process names, status codes, etc.), read it before the first question. Grilling on a codebase fails when the agent re-learns jargon every session or quietly conflates two meanings of one word.
+
+During the session:
+
+- **Challenge fuzzy language against the glossary.** If the user says a term the glossary defines, confirm you're both using it the same way. If they describe a concept verbosely and a glossary term already covers it, say so.
+- **Sharpen new terms.** When the feature introduces a term not in the glossary — or uses an existing term in a new way — that's a grilling branch: get a one-line definition the user agrees on. Surface collisions explicitly (does this new "X" mean the same as the existing "X"?).
+- **Cross-reference code.** Verify a proposed term against how the codebase actually names the concept (a grep often settles it faster than a question).
+- **Update the glossary as you go.** When the session lands a sharpened or new definition, add/update the entry in the same commit as the feature — undocumented shared language is the gap this skill exists to close.
+
+This glossary pass is optional for non-codebase use (writing, planning, personal decisions), but mandatory for any feature touching a repo that maintains one.
+
 ## Question Branches
 
 Walk these branches in order, but skip any that are obviously answered by context:
@@ -97,6 +110,8 @@ Produce an **Intent Summary**:
 ```
 
 This summary becomes the input to `/research-gate` Phase 1. Paste it directly into the research-gate feature description.
+
+Before producing the summary, confirm any glossary additions or edits the session produced are written — the Intent Summary should use the glossary's terms verbatim.
 
 ## Integration
 

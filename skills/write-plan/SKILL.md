@@ -32,7 +32,7 @@ Create `docs/plans/YYYY-MM-DD-{feature-slug}.md`:
 - [ ] Build passes all affected projects
 - [ ] No lint errors
 
-These criteria are verified by `/review-impl` Agent A (Spec Compliance) and Phase 4 (Visual Verification).
+These criteria are verified by `/review-impl` Agent A (Spec Compliance) and Phase 4 (Playwright Visual Verification).
 
 **Approach:** [2-3 sentences — the chosen approach from research gate]
 **Constraints:** [Key constraints that shaped this approach]
@@ -44,6 +44,20 @@ These criteria are verified by `/review-impl` Agent A (Spec Compliance) and Phas
 | Create | `project/src/components/NewView.jsx` | — |
 | Modify | `project/src/App.jsx` | 45-60 |
 | Modify | `shared/utils.js` | append |
+
+## User Flow (optional — include only for features with a multi-screen / multi-step user journey)
+
+A mermaid `flowchart` of the path the user takes through the feature. Drop it in the plan and hand it to the coding agent so the screens, branches, and decision points are explicit *before* any are built — cheaper than discovering a missing branch in Task 4. **Skip** for API-only, single-screen, cosmetic, or read-only features (a diagram of one screen is noise).
+
+```mermaid
+flowchart TD
+  A[User opens Import view] --> B{Items importable?}
+  B -- no --> C[Show dropped-row notice: missing required fields]
+  B -- yes --> D[Select rows + confirm in ImportModal]
+  D --> E[POST /api/items?endpoint=batch-import]
+  E --> F[items + subitems written to DB]
+  F --> G[Item surfaces in UI as imported record]
+```
 
 ## Task 1: [Component/Feature Name]
 
@@ -65,17 +79,31 @@ These criteria are verified by `/review-impl` Agent A (Spec Compliance) and Phas
 
 ## Task N: Final Verification
 
-- [ ] Build all affected projects
-- [ ] Lint passes
+- [ ] Build all affected projects: `cd project && npm run build`
+- [ ] Lint passes: `cd project && npm run lint`
 - [ ] Manual smoke test: [what to check in browser]
 - [ ] Playwright verification: [if applicable]
 
-## Parallel Execution Map
+## Agent Orchestration Spec
 
-[Which tasks can run in parallel vs. which have dependencies]
-
+[Dependency graph]
 Task 1 ──→ Task 3 ──→ Task 5 (verify)
 Task 2 ──→ Task 4 ──╱
+
+### File-ownership map
+| Hot file (touched by 2+ tasks) | Tasks | Owning agent | Stage |
+|--------------------------------|-------|--------------|-------|
+| `path/to/BigComponent.jsx`     | 1,4,6 | C3 then D2   | C / D |
+
+### Stages (fan-out / fan-in)
+| Stage | Agents (parallel) | Model | Isolation | Gates on |
+|-------|-------------------|-------|-----------|----------|
+| 0     | S0 schema/migration | opus | worktree | — |
+| C     | C1 ∥ C2 ∥ C3 (file-disjoint) | opus/sonnet | worktree | Stage 0 merged |
+| D     | D1 ∥ D2 | sonnet | worktree | Stage C merged |
+| E     | E1 tests ∥ E2 review | sonnet/opus | worktree/none | Stage D merged |
+
+Merge order + guardrails: [base-SHA per stage, /worktree-guard before copy, commit-before-report]
 ```
 
 ## Vertical Slicing (MANDATORY)
@@ -106,7 +134,8 @@ Before presenting the plan to the user, verify:
 - [ ] **Each task is independently verifiable** — has a verify step
 - [ ] **Scope per task is S or M** — break L tasks into smaller pieces
 - [ ] **Every phase is a vertical slice** — each one produces a testable end-to-end increment (see Vertical Slicing section above). No "all backend then all UI" plans.
-- [ ] **Parallel opportunities identified** — independent tasks marked for concurrent execution
+- [ ] **User-flow diagram included for multi-screen features** — optional, but for any feature with a multi-step user journey, add the mermaid `flowchart` (see Plan Document Structure) so the screens/branches are explicit before building. Skip for API-only / single-screen / cosmetic work.
+- [ ] **Agent Orchestration Spec present** — every plan with 3+ tasks has the orchestration section: file-ownership map, stages, agent assignments, merge order. See section below — this is MANDATORY, not optional.
 - [ ] **Constraints from research gate are respected** — no approach that was already eliminated
 - [ ] **"Always/Ask/Never" boundaries carried over** — if research-gate produced implementation boundaries, they're referenced or restated at the top of the plan
 - [ ] **Existing patterns followed** — uses shared utilities, matches codebase conventions
@@ -135,31 +164,81 @@ Any feature that writes to a database, cache store, or shared state (e.g. a pend
 
 **How to use this:** In the plan document, add a short "State / Timing / Race audit" subsection that names each hazard that applies and the mitigation, or explicitly notes "N/A — feature is UI-local / read-only". Reviewers check this section exists.
 
+## Agent Orchestration Spec (MANDATORY for 3+ task plans)
+
+**Every plan with 3 or more tasks MUST include an Agent Orchestration Spec.** Planning and
+orchestration are not separate activities — a plan that doesn't say *how it gets executed by
+agents* is half a plan. Do not defer this to "later" or "if the user wants parallelism." Design
+the orchestration as part of the plan, every time.
+
+A bare dependency graph ("Task 1 → Task 3") is NOT an orchestration spec. The spec must answer:
+*which agent owns which files, in what stage, and in what merge order.*
+
+### Step 1 — Build the file-ownership map (the conflict-avoidance contract)
+
+List every file touched by **2 or more tasks**. Two worktree agents editing the same file =
+guaranteed merge conflict. So each hot file is assigned to **exactly one agent per stage**, and
+the tasks that touch it are either given to that one agent or split across serialized stages.
+Hot files (large shared components, central API routers, `shared/*`) are the binding constraint
+on how wide you can fan out — identify them first, then design stages around them.
+
+### Step 2 — Group tasks into stages (fan-out / fan-in)
+
+Apply cascade-orchestration **Pattern 2 (Sequential Pipeline) + Pattern 1 (Fan-Out/Fan-In)**:
+
+- **Stage 0** — schema/migration or any other true blocker. Single-threaded or one agent. The
+  only allowed horizontal slice. Everything downstream gates on it.
+- **Stage C (and beyond)** — fan out parallel agents whose file sets are **disjoint**. Agents
+  that would touch the same hot file go in *different* stages, not the same one.
+- **Final stage** — verification: tests, `/review-impl`, build, visual check. Always last.
+
+Within a stage, every agent: `isolation: "worktree"`, branches from the **same pinned base SHA**,
+builds its project, and **commits before reporting**.
+
+### Step 3 — Assign agents, models, and merge order
+
+For each agent specify: id, role, model (`sonnet` floor for routine; `opus` for schema, API
+contracts, security, review — per `/model-selection`), `isolation`, the explicit disjoint file
+list it owns, and which tasks it covers. Then state the merge order and the fan-in steps
+(`/worktree-guard` before each copy, build, verify "Done When").
+
+### Orchestration guardrails (always restate in the plan)
+
+- **Base-SHA discipline** — every agent in a stage branches from the same SHA; pass the literal
+  SHA in each agent prompt (concurrent pushes lag the worktree base).
+- **Commit-before-report** — verify with `git -C <worktree> log`; empty diff = agent failed.
+- **/worktree-guard before every copy** — never `cp` a worktree file without the conflict diff.
+- **No cross-stage parallelism** — later-stage agents edit earlier-stage-owned files.
+- **Max depth 2** — orchestrated agents do not spawn sub-agents.
+- **Code-modifying agents MUST use `isolation: "worktree"`** (prevents the class of incident where a subagent modifies live/production files).
+
+### When the plan is small
+
+For a 3-task plan with no hot-file overlap the spec can be three lines (one stage, three
+disjoint agents, merge in any order). It is still required — brevity is fine, omission is not.
+A genuinely sequential plan (each task depends on the last) states that explicitly: "single
+chain, no fan-out — Stage A → B → C, one agent each or main-thread sequential."
+
 ## Execution Modes
 
-After the user approves the plan:
+After the user approves the plan, execute the Agent Orchestration Spec above. The spec already
+defines the stages and agents — these modes are just how tightly you follow it:
 
-### Mode A: Subagent Execution (recommended for 3+ tasks)
+### Mode A: Full orchestration (default for 3+ tasks)
 
-Dispatch parallel agents using `isolation: "worktree"` for independent tasks:
+Execute the Orchestration Spec stage by stage: dispatch each stage's agents in parallel (single
+message, multiple Agent calls, `isolation: "worktree"`), fan in with `/worktree-guard` + merge +
+build, then proceed to the next stage. This is the default — the spec was designed for it.
 
-```
-For each independent task group:
-1. Launch agent with worktree isolation
-2. Agent reads the plan document for its assigned task(s)
-3. Agent implements, verifies (build + lint), and reports
-4. Main thread reviews results and merges
-```
+### Mode B: Sequential Execution (genuinely dependent tasks or <3 tasks)
 
-### Mode B: Sequential Execution (for dependent tasks or small plans)
+Execute tasks sequentially with TodoWrite tracking. Use only when the Orchestration Spec itself
+concluded "single chain, no fan-out."
 
-Execute tasks sequentially with TodoWrite tracking. Mark each complete as you go.
+### Mode C: Hybrid
 
-### Mode C: Hybrid (most common)
-
-- Independent infrastructure tasks (API endpoints, utilities) → parallel subagents
-- Dependent UI integration → sequential after infrastructure is ready
-- Final verification → always sequential, always last
+Some stages fan out, some are single-threaded (e.g. Stage 0 schema). This is what most
+multi-stage specs already describe — just follow the spec.
 
 ## Plan Maintenance
 

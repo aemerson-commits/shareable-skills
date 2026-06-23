@@ -19,11 +19,11 @@ Comprehensive review gate before merging dev to main. Dispatches parallel review
 
 Before dispatching review agents, run these in parallel-batched Bash calls — one batch = one message with multiple tool_use blocks. Sequential runs take ~2min; parallel batches finish in ~35s.
 
-**Batch 1 — Lint (all frontend projects):** run `npx biome check src/` (or your linter) from each project dir. Stop if any fail.
+**Batch 1 — Lint (all frontend projects):** run `npm run lint` (or your linter command) from each project dir. Stop if any fail. Use `npm run lint`, NOT a formatter-inclusive check command — formatter-only diffs are not lint errors and will produce false positives that the CI lint gate ignores. Match the canonical command CI runs.
 
-**Batch 2 — Build (same projects):** each running `npm run build`. Catches type errors, missing imports, bundle-breaking changes.
+**Batch 2 — Build (same projects):** each running `npm run build`. Catches type errors, missing imports, bundle-breaking changes. **Builds are necessary but NOT sufficient** — consumer *tests* catch what builds miss (see Batch 3).
 
-**Batch 3 — Tests + secrets scan:** unit tests + `grep -rn "SECRET\|PASSWORD\|API_KEY\|CLIENT_SECRET" --include="*.js"` across touched paths.
+**Batch 3 — Tests + secrets scan:** run **every consumer project's full test suite** whose code the diff affects — for a `shared/*` change that means running tests for all consumer projects, not just the shared package. A passing build is NOT a passing test: a consumer project can carry a test that asserts the shared module's behavior; builds miss it and the CI test gate catches it only after the push. Plus `grep -rn "SECRET\|PASSWORD\|API_KEY\|CLIENT_SECRET" --include="*.js"` across touched paths.
 
 If any batch surfaces failures, surface them before proceeding — review agents below assume a clean build.
 
@@ -66,7 +66,21 @@ Simulate three attacker profiles against all exposed surfaces:
 - Backend API server — admin auth, SQL parameterization
 - Error responses — no stack traces, no internal details
 - Headers on all responses — security headers present
-- **Scaffolding/diagnostic routes MUST be removed before commit** — temporary endpoints added mid-session to introspect data (e.g. `/_tables`, `/_schema/:table`, `/debug/*`, `/_probe-*`) get shipped by mistake when they should be deleted once they've served their purpose. Grep the diff for routes prefixed with `_`, `debug`, `probe`, or commented as "temporary" / "diagnostic" / "scaffolding" — every match is a removal candidate.
+- **Scaffolding/diagnostic routes MUST be removed before commit** — temporary endpoints added mid-session to introspect data (e.g. `/_tables`, `/_schema/:table`, `/debug/*`, `/_probe-*`) get shipped by mistake when they should be deleted once they've served their purpose. Grep the diff for routes prefixed with `_`, `debug`, `probe`, or commented as "temporary" / "diagnostic" / "scaffolding" — every match is a removal candidate. If genuinely needed long-term, gate with the same auth as existing analogous routes.
+
+### 1b. Vibe-Coded Pre-Launch Checklist (behavioral)
+
+Fast-moving / AI-generated ("vibe-coded") features ship correct-looking UI on top of un-audited data paths. Before any such feature merges, walk this checklist explicitly — it is the highest-yield subset of §1, scoped to the mistakes that recur when code is generated quickly:
+
+- [ ] **Every new endpoint has an auth guard.** `POST`/`PUT`/`DELETE` and any data-returning `GET` calls the project's auth middleware. A new route with no guard is the default failure mode.
+- [ ] **Identity is server-derived, never client-supplied.** The user's email/role comes from the verified auth token — never from a request body, query param, or header the client controls. Grep the handler for any `body.email`/`?email=` used for scoping.
+- [ ] **Ownership / IDOR check on every resource fetch.** Reading or mutating a record by id verifies the caller owns or participates in it. Guessing another id must not return another user's data.
+- [ ] **Row-level privacy holds.** List/query endpoints filter to the caller's scope server-side; "company-wide read" is a deliberate, documented exception, not an accident.
+- [ ] **Admin routes enforce RBAC server-side.** Role check on the server, not just a hidden nav item. A non-admin curling the endpoint must 403.
+- [ ] **No secrets in the client bundle.** Tokens/keys live in environment secrets; the React build references none. Re-run the Batch 3 secrets grep against the new code.
+- [ ] **Input validation on every user-controllable param.** Zod or explicit guards; `parseInt`/`JSON.parse` wrapped so bad input is a 4xx with `{ error: string }`, never a 5xx.
+
+**Auth baseline:** establish a baseline auth audit for your project surface (admin endpoints server-side guarded, server-side identity, owner/participant checks intact). Treat any new finding in these areas as a regression, not a pre-existing gap.
 
 ### 2. Performance Review
 
@@ -178,6 +192,29 @@ Common false positives to skip:
 - All user-controlled data escaped before rendering
 - Environment variables not leaked to client bundles
 
+## Diff-Level Review Pass
+
+**Always `git fetch origin` first and diff against `origin/main`, NOT local `main`.** Local `main` is frequently stale — this repo merges via release-branch PRs on GitHub, so local `main` can sit dozens-to-100+ commits behind `origin/main` while still being a clean ancestor of `dev`. Reviewing `main..dev` against a stale local main wildly inflates scope. Confirm the real base before scoping: `git fetch origin && git merge-base --is-ancestor origin/main dev && echo clean-FF || echo diverged` — if diverged (origin/main carries release commits dev lacks), the two-dot and three-dot diffstats will still match when content is identical (dev ⊇ origin/main), confirming a clean content fast-forward.
+
+Before/alongside the domain agents, scan `git diff origin/main..dev` progressively:
+
+1. `--stat` overview — identify blast radius (which projects and files changed)
+2. Per-area diffs — read each changed area for logic correctness
+3. Security grep on ADDED lines only:
+   ```bash
+   git diff origin/main..dev | grep "^+" | grep -iE "api_key|secret|token|dangerouslySetInnerHTML"
+   ```
+4. Scaffolding/diagnostic-route check — routes added mid-session often get shipped by accident:
+   ```bash
+   git diff origin/main..dev | grep -iE "^\+.*(probe|debug|temporary|_schema|_tables)"
+   ```
+5. New-export check on `shared/*` — any new export in `shared/` affects all consumer projects; verify every consumer handles it:
+   ```bash
+   git diff origin/main..dev -- shared/ | grep "^+export"
+   ```
+
+`grep "^+[^+]"` isolates added non-header lines (excludes the `+++` file header lines) for focused analysis.
+
 ## Live Endpoint Testing
 
 Security and performance agents can test live dev endpoints using service account credentials:
@@ -185,7 +222,7 @@ Security and performance agents can test live dev endpoints using service accoun
 **curl-based** (API testing):
 ```bash
 curl -s -H "CF-Access-Client-Id: $CF_ID" -H "CF-Access-Client-Secret: $CF_SECRET" \
-  "https://{{your-app}}.example.com/api/endpoint"
+  "https://your-app.example.com/api/endpoint"
 ```
 
 **Playwright-based** (UI security/UX testing — see `/webapp-testing` skill):
@@ -196,7 +233,9 @@ curl -s -H "CF-Access-Client-Id: $CF_ID" -H "CF-Access-Client-Secret: $CF_SECRET
 
 ## Execution — Cascading Agent Teams
 
-Launch 5 domain agents in parallel (all model: "opus"). Each domain agent may spawn sub-agents for deeper analysis:
+**Scale the fan-out to the diff** — 5 domains × sub-agents is the FULL-release shape, not the default. Before dispatching, map the diff against the domains: skip or fold domains the diff can't touch (no worker/API/auth changes → fold Security into Code Quality's checklist; frontend-only → skip Scalability; no UI changes → skip UX). A small release (≤ ~10 files, one project) usually needs 2-3 domain agents with NO sub-agent spawning; reserve the 12-agent cascade for multi-project cuts with security-sensitive surface. State in the report which domains were skipped and why — a skipped domain is a documented judgement, not a blind spot.
+
+Launch the selected domain agents in parallel (all model: "opus"). Each domain agent may spawn sub-agents for deeper analysis:
 
 **Agent 1: Security Penetration Review**
 Spawns 3 sub-agents (one per attacker profile):
@@ -243,6 +282,7 @@ After executing fixes:
 - Backend admin auth MUST use `crypto.timingSafeEqual`, not `!==`
 - `dangerouslySetInnerHTML` MUST use DOMPurify or equivalent sanitization
 - Backend body parser needs explicit size limits — default may be too low or undocumented
+- Auth middleware that is a no-op (e.g. `next()` with no check) — always verify middleware actually validates
 - **Scaffolding/diagnostic routes MUST be removed before commit** — routes prefixed with `_`, `debug`, `probe`, or commented as "temporary" are removal candidates
 
 ### UX Consistency (Recurring)
@@ -251,6 +291,8 @@ After executing fixes:
 - New views MUST be added to tab visibility arrays
 - New CSS files MUST be imported in their component (not App.css)
 - Shared formatting functions (dates, currency) must use the shared util — don't duplicate per-view
+- Shared `Modal` component uses `useId()` for unique aria-labelledby — don't revert to hardcoded IDs
+- Shared `EmptyState` component exists but is often unused — new views should prefer it over ad-hoc empty states
 
 ### Performance (Recurring)
 - Polling intervals (e.g. 30s data refresh) should be extracted to a named component, not inline in App state
@@ -263,3 +305,27 @@ After executing fixes:
 - Shared utility functions duplicated across projects — consolidate to shared source
 - Mock/dev data remaining in production bundle — extract to conditional import
 - Dead code from deprecated systems — clean up promptly when systems are removed
+
+### Component-Deletion & CSS-Graduation Discipline (Recurring)
+
+- **A component/feature DELETION must grep for every removed symbol's remaining REFERENCES, not just removed imports.** A deletion can remove props/declarations but leave JSX usages behind — guaranteed `ReferenceError` on the affected render path. Build + tests may stay green if `noUndeclaredVariables` is off and no render test covers that branch. For every deletion diff: `grep` each deleted identifier across the file/project and demand zero hits; add a cheap render test for the touched component's main branch.
+- **Before deleting a "duplicate" App.css block, grep ALL render sites of the class.** App.css rules are GLOBAL — components beyond the shared component may depend on them without importing any scoped CSS owner. A block is safe to delete only when every render site imports a CSS owner. Otherwise the "duplicate" is the only styling for those render sites — keep it with a comment explaining its serving role.
+
+## Audit Grep Pack (run during full reviews)
+
+Each row is tied to a real past bug — these greps catch recurrences cheaply.
+
+| Concern | Grep | Pass criterion |
+|---------|------|----------------|
+| DB bind cap | `grep -rn "IN (" --include=*.js */functions shared/` cross-checked vs `chunkArray` usage | every dynamic IN-clause runs through chunkArray or equivalent (most DBs have a bind-parameter cap) |
+| Cache TTL threading | `grep -rn "setCache\|cacheTtl\|expirationTtl" */functions shared/` | route-declared TTL actually flows through to the cache-set call (bugs drop it mid-chain) |
+| Bundle size / lazy | `ls -lh */dist/assets/*.js \| sort -k5 -hr` + `grep -rn "React.lazy" */src` | no chunk >200KB without React.lazy |
+| a11y onClick | `grep -rn "onClick" */src \| grep -E "<div\|<span\|<tr\|<li"` | each hit has role+tabIndex+onKeyDown or becomes a `<button>` |
+
+### Refactor, Sweep & Fix-Batch Discipline (Recurring)
+
+- **Run a pre-merge review pass AFTER the Phase-B fix-batch, not just after the original feature.** Fixes regress. A "behavior-preserving" extraction can drop an import, causing a `ReferenceError` swallowed by a try/catch — a silent regression that `npm run build` and hundreds of tests miss (if `noUndeclaredVariables` is off, no render test covers the branch). Only a blind multi-domain review after the fix-batch catches it. Treat "we already reviewed the original feature" as insufficient once fixes land on top.
+- **Large mechanical refactor / god-component decompose → grep that every symbol the post-refactor code still references is still imported.** Dropped imports survive `npm run build` when `noUndeclaredVariables` is off and only degrade at runtime through a swallowing try/catch. For any decompose/extraction in the diff: `grep` the orchestrator for each function it calls and confirm a matching `import` line still exists. Also blind-diff each extracted block against `git show <main>:<file>` (the original) to confirm byte-equivalent logic.
+- **A dedup sweep must re-grep ALL projects AT CLOSEOUT, not from the pre-run snapshot.** A fix-sweep may fix one project, but a parallel extraction agent simultaneously creates a new copy of the buggy code in a different file — a third copy the pre-run grep never saw. After parallel Phase-B agents land, re-run every "fix-once-everywhere" sweep's identifying grep across all consumer projects.
+- **A finding that flips a flag / changes a config with an explicit in-code rationale must be re-validated against that rationale before executing.** "Approved at the human gate" does not mean "correct" when the finding itself was wrong — surface the contradiction instead of auto-applying.
+- **Integrating worktree-agent commits: `git show --name-only <sha>` FIRST.** The harness `isolation:"worktree"` can branch from a stale base; agents then re-create files a prior wave already landed. If the commit touches already-landed files, don't cherry-pick it whole — `git checkout <sha> -- <project-dir>/` to take only the agent's project files, keep canonical shared, then build-verify.

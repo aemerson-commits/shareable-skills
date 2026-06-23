@@ -36,8 +36,8 @@ def get_site_key(url):
     for key, base in SITES.items():
         if base in url or key in url:
             return key
-    # Default to portal
-    return "portal"
+    # Default to first configured site
+    return next(iter(SITES))
 
 def get_session_dir(site_key):
     return str(SESSION_DIR / site_key)

@@ -36,7 +36,7 @@ This skill IS the Feature-Ship Checklist. Steps 3 (Roadmap), 5 (Help Content), a
 
 ### Agent Teams Architecture
 
-When closing out a session, dispatch these agent teams simultaneously after the End-of-Session Review completes (all model: "opus"):
+When closing out a session, dispatch these agent teams simultaneously after the End-of-Session Review completes (all model: "sonnet" — doc-writing agents per the model-selection routing matrix):
 
 **Team A — Obsidian Vault Updates** (3 parallel agents):
 - **Agent: Session Note Writer** — Create/update today's session note (Step 1). Needs: session summary, commits, files changed
@@ -50,6 +50,8 @@ When closing out a session, dispatch these agent teams simultaneously after the 
 **MANDATORY agents**: Session Note Writer, Roadmap Updater, Memory Updater, and Help Content Updater MUST always be dispatched. Skill Tracker is optional if no skills were invoked.
 
 **Sequential prerequisite**: The End-of-Session Review (git commit, deploy, verify) MUST complete before dispatching teams. Notes must reflect final state, not in-progress state.
+
+**Incremental-append preference (token economy)**: if the session already appended milestones to today's note as work landed (the cheap pattern — a one-line append per shipped item during the day), close-out is a TRIM-and-organize of that note, not a from-scratch reconstruction. Agents should be told what already exists in the note so they extend rather than regenerate. Each agent prompt must also scope its reads: targeted greps + line-ranged reads of Roadmap/MEMORY/help content, never whole-file reads of 1000+ line documents.
 
 Each agent should use the Obsidian CLI auto-detect pattern documented above. All vault agents use `2>&1 | grep -v "Loading\|out of date"` on every CLI call.
 
@@ -77,9 +79,11 @@ File: `{{project}}/Sessions/{YYYY-MM-DD}.md`
 ```yaml
 ---
 commits: [abc1234, def5678]    # append new SHA to existing array
-keywords: [scheduler, deploy, bug-fix]  # merge with existing list
+keywords: [deploy, bug-fix, refactor]  # merge with existing list
 ---
 ```
+
+Re-check this status in ~1 week — if Obsidian patches the bug, the `property:set` CLI route can return.
 
 **Keywords**: Add 3-8 retrieval keywords per session — terms someone would search for later.
 Include: technologies used, problem types solved, components touched, concepts discussed.
@@ -97,8 +101,10 @@ Only update if the component was modified this session. Use `append` for additio
 
 File: `{{project}}/Roadmap.md`
 
+**Token economy**: do NOT read the full Roadmap.md if it is large. Grep for the section headers and project names touched this session, then read ONLY those line ranges. Same rule for MEMORY.md — the index is loaded in context already; never re-read the whole journal.
+
 **Always do ALL of these:**
-1. **Read the full roadmap** first to understand current state
+1. **Read the roadmap sections relevant to this session's work** (targeted grep + ranged reads) to understand current state
 2. **Update "Current State" paragraph** date and add any new facts about the system
 3. **Update "Active Projects" table** — change statuses for projects worked on this session
 4. **Mark completed items** in Immediate Backlog and lower sections
@@ -119,6 +125,18 @@ File: `{{project}}/Roadmap.md`
 ```bash
 "$OBS" append path="{{project}}/Roadmap.md" content="\n- [ ] {new item}" 2>&1 | grep -v "Loading\|out of date"
 ```
+
+### 3a. Update Project Frontmatter (MANDATORY when a project shipped or changed status)
+
+If your vault tracks individual projects as separate files, edit their frontmatter when status changes. Use the Edit tool directly (`property:set` is broken in some Obsidian versions — see Step 1):
+
+```yaml
+status: shipped          # active | blocked | shipped | paused — flip to shipped when the work is merged/live
+shipped: 2024-01-15      # YYYY-MM-DD the status flipped to shipped (leave blank otherwise)
+last_update: 2024-01-15  # always bump to today when touched
+```
+
+Only flip to `shipped` when the work is actually merged/live — leave genuinely in-flight projects `active`/`blocked`/`paused`.
 
 ### 4. Update Learnings (if new patterns/gotchas)
 

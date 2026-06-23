@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[ComponentName] Design Showcase</title>
+  <!-- Replace with actual fonts for the task -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+  <style>
+    /* === Reset & Base === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    [data-theme="dark"]  { --bg: #111827; --surface: #1f2937; --border: #374151; --text: #f9fafb; --muted: #9ca3af; --accent: #3b82f6; }
+    [data-theme="light"] { --bg: #f9fafb; --surface: #ffffff; --border: #e5e7eb; --text: #111827; --muted: #6b7280; --accent: #2563eb; }
+    body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', system-ui, sans-serif; line-height: 1.5; }
+
+    /* === Top Nav === */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .nav-title { font-weight: 600; font-size: 14px; margin-right: auto; }
+    .nav a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 4px 8px; border-radius: 4px; transition: color 0.15s; }
+    .nav a:hover { color: var(--text); }
+    .theme-toggle {
+      background: var(--border); border: none; color: var(--text); font-size: 12px;
+      padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: inherit;
+    }
+
+    /* === Variant Sections === */
+    .variant { padding: 48px 24px; border-bottom: 1px solid var(--border); max-width: 1100px; margin: 0 auto; }
+    .variant-header { margin-bottom: 32px; }
+    .variant-tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px; }
+    .variant-name { font-size: 22px; font-weight: 600; margin-bottom: 12px; }
+    .rationale {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+      padding: 16px; font-size: 13px; color: var(--muted); line-height: 1.6;
+    }
+    .rationale ul { padding-left: 18px; margin-top: 8px; }
+    .rationale li { margin-bottom: 4px; }
+
+    /* === Demo Area === */
+    .demo { margin-top: 24px; }
+
+    /* === Responsive === */
+    @media (max-width: 768px) {
+      .nav { gap: 8px; padding: 10px 16px; }
+      .variant { padding: 32px 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top nav — add one anchor per variant -->
+<nav class="nav">
+  <span class="nav-title">[ComponentName] Showcase</span>
+  <a href="#variant-00">00 Current</a>
+  <a href="#variant-01">01 Variant</a>
+  <!-- add more anchors here -->
+  <button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">Toggle theme</button>
+</nav>
+
+<!-- Variant 00: Current (control baseline — always include) -->
+<section class="variant" id="variant-00">
+  <div class="variant-header">
+    <div class="variant-tag">Variant 00</div>
+    <div class="variant-name">Current</div>
+    <div class="rationale">
+      Faithful recreation of the existing design. Baseline for comparison.
+      <ul>
+        <li>Layout: [describe]</li>
+        <li>Typography: [describe]</li>
+        <li>Colors: [describe]</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <!-- PASTE VARIANT 00 COMPONENT HTML HERE -->
+  </div>
+</section>
+
+<!-- Variant 01: [Philosophy Name] -->
+<section class="variant" id="variant-01">
+  <div class="variant-header">
+    <div class="variant-tag">Variant 01</div>
+    <div class="variant-name">[Philosophy Name]</div>
+    <div class="rationale">
+      [2-3 sentence rationale describing what this variant prioritizes and why]
+      <ul>
+        <li>[Design decision 1]</li>
+        <li>[Design decision 2]</li>
+        <li>[Design decision 3]</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <!-- PASTE VARIANT 01 COMPONENT HTML HERE -->
+  </div>
+</section>
+
+<!-- Add more variant sections following the same pattern -->
+
+<script>
+  // Minimal JS: cursor-tracking glow for 21st.dev variant (if included)
+  // document.addEventListener('mousemove', (e) => {
+  //   document.documentElement.style.setProperty('--mx', e.clientX + 'px');
+  //   document.documentElement.style.setProperty('--my', e.clientY + 'px');
+  // });
+</script>
+</body>
+</html>

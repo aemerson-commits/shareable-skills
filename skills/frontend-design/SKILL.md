@@ -175,23 +175,55 @@ Use a consistent `KPICard` component for metric cards across all projects:
 
 ### Charts (Recharts)
 
-**Dark tooltips require THREE props**:
-```jsx
-<Tooltip
-  contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151' }}
-  labelStyle={{ color: '#F9FAFB' }}
-  itemStyle={{ color: '#FFFFFF' }}
-/>
-```
-
-If your project uses shared chart constants, prefer importing them:
+Use shared tooltip styles if your project exports them:
 ```jsx
 import { CHART_TOOLTIP } from '@your-shared/constants'
 <Tooltip {...CHART_TOOLTIP} />
 ```
 
-- Bundle split: Recharts in `manualChunks` (vite.config.js) — always preserve
-- ResponsiveContainer: `height={isMobile ? 200 : 250}` standard
+**Legend standard (enforced — e.g. via `scripts/lint-chart-legends.mjs`).**
+A **multi-series** chart (2+ bars/lines/areas, or a `.map()` that emits a series per
+datum) MUST give the reader a labeled key for its colors, two ways:
+
+1. **Visible legend** — add `<Legend wrapperStyle={{ fontSize: 11 }} />` (11px keeps it
+   readable on compact cards). Every series needs a `name=` prop so the legend (and
+   tooltip) labels it.
+2. **Color-aware tooltip** — the popup must show each series' color, not a uniform gray.
+   A shared `CHART_TOOLTIP` that sets `itemStyle:{color:'var(--text-secondary)'}` **flattens
+   every row to one color**. On a multi-series chart, pass a custom `content=` that colors
+   each row by `entry.color` instead:
+
+```jsx
+// Color-aware tooltip: a mini legend in the popup (swatch + name + value).
+function ChartTooltip({ active, payload, label }, fmt = (v) => v) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="chart-tooltip">
+      <p className="tooltip-label">{label}</p>
+      {payload.map((e, i) => (
+        <p key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 9, height: 9, borderRadius: '50%', background: e.color }} />
+          <span>{e.name}</span>
+          <span style={{ marginLeft: 'auto', fontWeight: 600 }}>{e.value != null ? fmt(e.value) : '—'}</span>
+        </p>
+      ))}
+    </div>
+  )
+}
+// ...
+<Tooltip content={<ChartTooltip />} />
+```
+
+- **Single-series** charts are exempt — the card title names the one series; a legend is noise.
+- **Custom / non-`<Legend>` key** (e.g. a color-dot caption or a deliberately key-less chart):
+  annotate it so lint skips it — `{/* chart-legend-ok: <reason> */}` on or just above the chart element.
+- If using a ratcheted lint gate: existing charts are grandfathered; it fails only on a NEW
+  multi-series chart that lacks a legend or color-aware tooltip.
+
+Additional chart patterns:
+- **Dark tooltips require THREE props**: `contentStyle`, `labelStyle`, `itemStyle`
+- **Bundle split**: Keep Recharts in `manualChunks` (vite.config.js)
+- **ResponsiveContainer**: `height={isMobile ? 200 : 250}` standard
 
 ### Tables
 
@@ -204,7 +236,7 @@ import { CHART_TOOLTIP } from '@your-shared/constants'
 
 Use a shared modal component with:
 - Focus trap (`useModalA11y` or native `<dialog>` + `showModal()`)
-- Overlay-click-to-close: `if (e.target === e.currentTarget) onClose()` on the overlay — do NOT use `stopPropagation` on inner content (breaks child portals)
+- Overlay-click-to-close: `if (e.target === e.currentTarget) onClose()` on the overlay — do NOT use `stopPropagation` on inner content (breaks children that render outside the DOM tree via `ReactDOM.create*` APIs)
 - Backdrop: `rgba(0, 0, 0, 0.5)` with optional blur
 - Escape key close
 - Scroll lock on body while open
@@ -286,3 +318,4 @@ After `/design-showcase` and the user picks a variant, porting it into the real 
 - `/design-showcase` — for exploratory redesigns, run a showcase first. Dispatches a single Opus agent that builds a self-contained HTML page with 3-7 design variants side-by-side. User picks a direction, then implement using the tokens and patterns above.
 - `/design-reverse-engineer` — extract design tokens and component patterns from any URL; use when anchoring a new view to a proven reference before building
 - `/webapp-testing` — Playwright visual verification after implementing a chosen variant
+- `reference-sites.md` (in `.claude/skills/design-reverse-engineer/`) — curated list of high-quality reference sites by domain

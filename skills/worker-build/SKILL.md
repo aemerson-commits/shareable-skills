@@ -197,9 +197,17 @@ Faster than sending test emails and digging through the inbox.
 
 **GOTCHA: Wrangler OAuth token expires ~2h.** Mid-session deploys may fail with `AuthenticationError [code: 10000]` if the token aged out. If you see this error, run `npx wrangler login` to refresh — the token location varies by OS (check wrangler's config directory). Do not retry the deploy until re-authenticated.
 
+### Getting a CF API token for direct schedule calls
+
+When the environment CF_API_TOKEN is unavailable or rejected, extract wrangler's OAuth token:
 ```bash
-# Get your OAuth token from wrangler's config (location varies by OS)
-TOK=$(grep '^oauth_token' ~/.config/.wrangler/config/default.toml | cut -d'"' -f2)
+# Location varies by OS — check wrangler's config directory
+CF_TOKEN=$(grep -E '^oauth_token' <wrangler-config-path>/default.toml | head -1 | sed 's/.*"//;s/".*//')
+```
+Expires ~2h. On `AuthenticationError [code: 10000]`, run `wrangler login` to refresh.
+
+```bash
+TOK=$(grep '^oauth_token' <wrangler-config-path>/default.toml | cut -d'"' -f2)
 ACCT=YOUR_CF_ACCOUNT_ID
 
 curl -s "https://api.cloudflare.com/client/v4/accounts/$ACCT/workers/scripts/{{your-worker}}/schedules" \
@@ -231,6 +239,24 @@ After the PUT, `modified_on` and `created_on` both advance to the current time. 
 - A cron monitoring alert fires for a worker whose `wrangler deploy` just ran "successfully"
 
 **Post-deploy verification**: after PUT, the definitive evidence the trigger fires is a fresh success KV entry on the next scheduled run. Don't assume success from wrangler output alone.
+
+## Bug-Class Sweep
+
+After fixing a bug in one worker, grep `workers/*/` for the same pattern class before committing — workers copy-paste shared logic and bugs propagate silently.
+
+Common classes to sweep:
+
+| Class | What to grep |
+|-------|-------------|
+| Em-dash in email subjects | `grep -rn "—\|–" workers/*/src/` (non-ASCII dashes) |
+| TTL math | grep for the specific constant or formula you just fixed |
+| `btoa()` newline handling | `grep -rn "btoa" workers/*/src/` |
+| `trackSuccess` params | `grep -rn "trackSuccess" workers/*/src/` — verify all call sites pass the same shape |
+| Bearer auth pattern | `grep -rn "Authorization" workers/*/src/` — timing-safe HMAC everywhere |
+
+Also check any shared utility module imported by most workers — a bug there propagates to all of them simultaneously.
+
+**Fix all affected workers in one pass, in the same commit.** Don't defer to follow-up commits — they consistently don't happen.
 
 ## Bulk Worker Redeploy Pattern
 

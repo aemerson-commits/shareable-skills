@@ -1,6 +1,6 @@
 # Shareable Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 46 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
+A complete development methodology built on parallel agent teams. 49 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
 ## Quick Start
 
@@ -66,7 +66,6 @@ When things go wrong:
 | `/audit-components` | Audit component health — verify imports, props, shared utility consistency across all projects. | N project auditors + 2 cross-project |
 | `/webapp-testing` | Playwright toolkit for testing web apps — CF Access auth, route intercepts, screenshots. | Single agent |
 | `/data-reconciliation` | Trace data through pipeline layers to find where values diverge. For stale/wrong data debugging. | 4 layer samplers |
-| `/frontend-design` | UI/UX design patterns, color tokens, and component conventions. | Reference (no agents) |
 
 ### Diagnostic Escalation
 
@@ -90,6 +89,14 @@ Use `--cascade` with `/persistent-issue` to auto-escalate through up to 3 teams 
 ```
 
 The router classifies the issue, tries the matched team first, and if unresolved, escalates to the next team in priority order.
+
+### Design
+
+| Skill | Purpose |
+|-------|---------|
+| `/frontend-design` | UI/UX design patterns, color tokens, chart-legend conventions, modal patterns, and component conventions. |
+| `/design-showcase` | Build a side-by-side visual comparison of 3–7 design variants for a component/view as a self-contained HTML showcase — pick a direction before implementing. |
+| `/design-reverse-engineer` | Reverse-engineer a design system from a URL (typography, palette, spacing, components, micro-interactions) into a Claude-ready design spec. |
 
 ### Document & Data Generation
 
@@ -120,6 +127,7 @@ The router classifies the issue, tries the matched team first, and if unresolved
 | `/session-notes` | End-of-session documentation: completed work, key decisions, learnings, "left off" state |
 | `/insight` | Weekly metrics report: development summary, architecture changes, priorities, blocked items |
 | `/triage-ideas` | Process Obsidian Ideas.md inbox: classify, confirm with user, route to project roadmap |
+| `/handoff` | Write a disposable session-handoff doc to OS temp so a fresh session/agent can continue one in-flight task slice without re-deriving context |
 
 ### Skill Maintenance & Continuous Learning
 

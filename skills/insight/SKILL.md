@@ -62,11 +62,24 @@ git diff --stat HEAD~{N}  # where N = commit count from above
 
 If your project captures web-vitals from real users (e.g., in a D1 `rum_events` table), query them now:
 
+> **Use p75, NOT mean.** Core Web Vitals are defined at the **75th percentile** precisely because backgrounded-tab samples poison the average — web-vitals reports LCP/FCP when a tab is refocused, which can be minutes later. Always: (1) filter outliers `numeric_value < 60000`, (2) report **p75**, (3) keep `max` visible so you can see the outlier tail you filtered.
+
 ```bash
-npx wrangler d1 execute your-db --remote --command "SELECT project, message AS metric, COUNT(*) AS samples, ROUND(AVG(numeric_value), 1) AS avg_value FROM rum_events WHERE event_type = 'perf' AND received_at >= datetime('now', '-7 days') GROUP BY project, message ORDER BY project, message" --json
+npx wrangler d1 execute your-db --remote --command "
+WITH f AS (
+  SELECT project, message AS metric, numeric_value,
+    ROW_NUMBER() OVER (PARTITION BY project, message ORDER BY numeric_value) AS rn,
+    COUNT(*)     OVER (PARTITION BY project, message) AS n
+  FROM rum_events
+  WHERE event_type='perf' AND received_at >= datetime('now','-7 days')
+    AND numeric_value < 60000          -- drop backgrounded-tab outliers (>60s = tab refocus, not a real load)
+)
+SELECT project, metric, n AS samples, ROUND(numeric_value,1) AS p75
+FROM f WHERE rn = CAST(ROUND(0.75 * (n - 1)) AS INT) + 1   -- nearest-rank p75
+ORDER BY project, metric" --json
 ```
 
-Compare each `avg_value` against the [web.dev/vitals](https://web.dev/vitals) thresholds:
+Compare each `p75` against the [web.dev/vitals](https://web.dev/vitals) thresholds:
 
 | Metric | Good | Needs Improvement | Poor |
 |--------|------|-------------------|------|
@@ -76,7 +89,7 @@ Compare each `avg_value` against the [web.dev/vitals](https://web.dev/vitals) th
 | FCP | ≤1800ms | 1800–3000ms | >3000ms |
 | TTFB | ≤800ms | 800–1800ms | >1800ms |
 
-Flag any metric crossing into "needs improvement" or "poor" — and any metric that degraded vs the prior 7 days.
+Flag any metric crossing into "needs improvement" or "poor" — and any metric that DEGRADED vs the prior 7 days (re-run with `received_at BETWEEN datetime('now','-14 days') AND datetime('now','-7 days')` to compare). A jump driven by a few huge samples (check `max` separately) is almost always the backgrounded-tab artifact, not a real regression — the `<60000` filter + p75 already guard against it, but sanity-check before raising an alarm.
 
 **Error trends (if applicable):**
 
@@ -86,7 +99,7 @@ If your project has an `event_log` table:
 npx wrangler d1 execute your-db --remote --command "SELECT dashboard, category, status, COUNT(*) AS n FROM event_log WHERE eventType = 'error' AND createdAt >= datetime('now', '-7 days') GROUP BY dashboard, category, status ORDER BY n DESC" --json
 ```
 
-Surface: total errors this week, top 3 categories by count, ratio of resolved/dismissed/still-new.
+Surface: total errors this week, top 3 categories by count, ratio of resolved/dismissed/still-new (the "noise floor"). If any single error type repeats >5 times, that's a hot spot worth calling out.
 
 ### 2. Generate Report
 
@@ -139,13 +152,17 @@ Template:
 
 ## Real-User Monitoring (web-vitals)
 
+_All values are **p75** with samples >60s filtered out (never report the mean)._
+
 | Project | LCP | CLS | INP | FCP | TTFB | Samples | Status |
 |---------|-----|-----|-----|-----|------|---------|--------|
-| {project} | {avg ms} | {avg} | {avg ms} | {avg ms} | {avg ms} | {n} | good / needs-improvement / poor |
+| {project} | {p75 ms} | {p75} | {p75 ms} | {p75 ms} | {p75 ms} | {n} | good / needs-improvement / poor |
 
 **Anomalies vs prior week:** {list any metric that degraded by >20% or crossed a threshold band}
 
-**Errors logged this week:** {N total · X new · Y resolved · Z dismissed} — top categories: {list top 3}
+**Errors logged this week (event_log):** {N total · X new · Y resolved · Z dismissed} — top categories: {list top 3}
+
+**Hot spots:** {any error type with >5 occurrences this week}
 
 ## Recurring Unresolved Items
 

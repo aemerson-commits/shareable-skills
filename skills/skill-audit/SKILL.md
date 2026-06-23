@@ -11,37 +11,56 @@ Run 6 automated checks across all project skills and produce a health report car
 ## When to Run
 
 - After bulk skill edits or new skill creation
-- Monthly maintenance (add to `/start-day` on first Monday of month)
+- Monthly maintenance (add to `/start-day` on the first session of each month)
 - When a skill misbehaves (wrong trigger, stale data, skipped steps)
 
 ## Checks
 
 Run checks 1-4 in parallel via subagents. Check 5 requires the current session's transcript. Check 6 requires the `/evolve` pipeline.
 
+> **Evidence rule (applies to every check).** A finding is only valid if the agent
+> can quote the EXACT source line that proves it — `file:line` + verbatim text.
+> Findings without a quotable line are hallucinations: drop them, do not report them.
+> Use **Grep** for extraction (deterministic, exhaustive), never excerpt-reading or
+> inference about what a file "probably" contains. Before returning, the agent must
+> re-grep each claimed finding and discard any it cannot reproduce.
+>
+> Dispatch checks 1-3 with `subagent_type: "general-purpose"`, not `Explore` —
+> Explore reads excerpts and trades exhaustive coverage for speed, which is the wrong
+> trade for a verification task.
+
 ### Check 1: Staleness Detection
 
-Dispatch an Explore agent:
+Dispatch a general-purpose agent:
 
 ```
 Scan all .claude/skills/*/SKILL.md and .claude/skills/*/skill.md files.
-For each skill, extract:
-- File paths referenced → verify they exist via Glob
-- Config IDs or identifiers referenced → verify against the project's source of truth config files
+Use Grep to EXTRACT (do not infer):
+- File paths referenced → verify each exists via Glob
+- Config IDs or identifiers referenced → verify against the project's source-of-truth config files
 - Function/export names referenced → spot-check against actual source files
 
-Report ONLY stale references (files that don't exist, IDs not in config).
+For EVERY stale reference reported, include: skill name, `file:line`, and the
+verbatim line text containing the reference. If you cannot quote the exact line,
+the reference does not exist — do not report it. Ignore glob/placeholder paths
+(e.g. `workers/<name>/`, `*/SKILL.md`). Before returning, re-grep each finding
+to confirm it reproduces; discard any that do not.
+
+Report ONLY confirmed stale references (files that don't exist, IDs not in config).
 ```
 
 **Pass criteria**: Zero stale file paths or config IDs.
 
 ### Check 2: Negative Output (Safety Guards)
 
-Dispatch an Explore agent:
+Dispatch a general-purpose agent:
 
 ```
 Read your project docs (CLAUDE.md, README, etc.) for known gotchas or warnings.
 For each gotcha, identify which skill(s) should warn about it.
 Then read those skills and check whether the warning is PRESENT or MISSING.
+For each MISSING guard, quote the skill's Gotchas section (`file:line`) to prove
+the warning is absent. Re-check before reporting.
 
 Report MISSING guards only.
 ```
@@ -50,19 +69,23 @@ Report MISSING guards only.
 
 ### Check 3: Cross-Skill Consistency
 
-Dispatch an Explore agent:
+Dispatch a general-purpose agent:
 
 ```
 Identify 3-5 cross-cutting topics in your project (e.g., authentication patterns,
 database connections, deployment procedures, API conventions, caching strategies).
 
 For each topic, read all skills that reference it and check for contradictions
-or incomplete coverage.
+or missing coverage.
 
-Report CONTRADICTIONS and INCOMPLETE coverage only.
+For every CONTRADICTION or MISSING-COVERAGE finding, quote the exact lines
+(`file:line` + verbatim text) on both sides of the discrepancy. A finding with
+only one side quoted, or neither, is unverified — drop it. Re-grep before reporting.
+
+Report CONTRADICTIONS and MISSING coverage only.
 ```
 
-**Pass criteria**: No contradictions. Incomplete coverage flagged as warnings.
+**Pass criteria**: No contradictions. Missing coverage flagged as warnings.
 
 ### Check 4: Context Efficiency
 
@@ -87,9 +110,9 @@ done | sort -rn
 
 If process skills were used in the CURRENT session, grade them against their documented steps:
 - **deploy**: Built first? Lint? From project dir? Correct branch? Post-deploy verify?
-- **session-notes**: All 7 sections? Keywords? MEMORY.md updated? Roadmap updated?
+- **session-notes**: All required sections? Memory file updated? Roadmap updated?
 - **research-gate**: Constraints? Patterns? Gotchas? Unknowns? Alternatives table? User approval?
-- **triage-ideas**: Read inbox? Classify? Confirm? Route to Obsidian + database? Clear inbox?
+- **triage-ideas**: Read inbox? Classify? Confirm? Route to knowledge base + database? Clear inbox?
 - **merge-to-main**: All parallel agents? Verification checks? Clean tree?
 
 **Pass criteria**: All documented steps followed. Skipped steps are flagged.

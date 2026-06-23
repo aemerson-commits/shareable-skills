@@ -74,6 +74,15 @@ Before writing a query, verify:
 
 ### 5. Migration Check
 
+**Migration files are canonical schema docs.** Your `migrations/*.sql` files capture exact CHECK / UNIQUE / NOT NULL constraints that a live `PRAGMA table_info` won't fully reveal. Glob them by feature domain before writing queries or reviewing upserts:
+
+```bash
+# Find all migrations touching a feature area
+ls <project>/migrations/ | grep -i "<keyword>"
+```
+
+Cross-reference any read-time enrichment layer — it may add columns or filter rows in ways the raw table schema doesn't show.
+
 Before creating a new migration:
 ```bash
 # List existing migrations
@@ -84,6 +93,24 @@ ls <project>/migrations/ | tail -1
 ```
 
 New migration should be numbered sequentially (e.g., `0018_*.sql` after `0017_*.sql`).
+
+**Applying a migration manually (when CI auto-apply won't run or is gated):**
+
+**Default — tracked apply (additive / non-DROP migrations: ADD COLUMN, CREATE TABLE, CREATE INDEX — the vast majority):**
+
+1. Apply: `npx wrangler d1 migrations apply <your-db> --remote` — auto-applies every un-applied file AND registers it in `d1_migrations`. **No manual INSERT needed.**
+2. Verify tables via `sqlite_master`: `SELECT name, sql FROM sqlite_master WHERE name='<table>'`
+3. Verify row counts / spot-check data: `SELECT COUNT(*) FROM <table>`
+
+> **Do NOT default to `d1 execute --file` for ordinary migrations.** Raw `d1 execute --file=…` does NOT write to `d1_migrations`, so CI re-executes the migration on its next run → `duplicate column` / `table already exists` failure. The manual-INSERT workaround below is error-prone — forget it once and CI breaks. `migrations apply` is the safe default.
+
+**Exception — `d1 execute --file` for DROP / destructive migrations only** (which `migrations apply` won't run safely):
+
+1. Execute the migration: `npx wrangler d1 execute <your-db> --remote --file=<project>/migrations/NNNN_name.sql`
+2. **Register it manually** so CI doesn't re-run it: `INSERT INTO d1_migrations (name) VALUES ('NNNN_name.sql')`
+3. Verify `sqlite_master`, the tracker (`SELECT name FROM d1_migrations ORDER BY name DESC LIMIT 5`), and row counts
+
+For data-seeding migrations, use `INSERT OR IGNORE` and re-verify that the expected seed rows exist post-apply.
 
 ## Anti-Patterns
 

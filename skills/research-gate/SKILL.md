@@ -38,7 +38,7 @@ Dispatch 4-5 research agents simultaneously (all model: "opus"):
 
 - **Agent: Prior Art Search** — Search codebase for similar features already built. Check if shared utilities or patterns exist for reuse. Output: PATTERNS + reuse opportunities
 
-- **Agent: State / Timing / Race Hunt** — Required if the feature mutates a database, cache keys, shared state (e.g. `scheduleOverrides` or equivalent), or triggers a refresh cycle. Skip for pure read/cosmetic features. Check for: stale `useMemo` traps (state setter followed by handler that reads the memo), cache-after-write invalidation hazards, React Query key coverage gaps, override confirmation semantics, re-entrancy (double-click), effect re-fire during pipeline churn, draft autosave debounce, DST in cron triggers, and secret-change → stale-bundle drift. Output: CONSTRAINTS + GOTCHAS keyed to specific project invariants.
+- **Agent: State / Timing / Race Hunt** — Required if the feature mutates a database, cache keys, shared state (e.g. override maps or equivalent), or triggers a refresh cycle. Skip for pure read/cosmetic features. Check for: stale `useMemo` traps (state setter followed by handler that reads the memo), cache-after-write invalidation hazards, React Query key coverage gaps, override confirmation semantics, re-entrancy (double-click), effect re-fire during pipeline churn, draft autosave debounce, DST in cron triggers, and secret-change → stale-bundle drift. Output: CONSTRAINTS + GOTCHAS keyed to specific project invariants.
 
 **Synthesis** (main agent): Merge all agents' outputs, deduplicate into:
 - CONSTRAINTS: Hard limits that eliminate approaches (e.g., "CSP blocks iframe PDF")
@@ -106,6 +106,33 @@ After the research gate clears, use `/write-plan` if:
 - The user explicitly asks for a plan
 
 Otherwise, proceed directly with implementation using TodoWrite for tracking.
+
+## Analog Feature Recon
+
+When a new feature mirrors an existing one, study the analog end-to-end before planning.
+
+**Why:** "This is just like X" is reliable only if you've read how X actually works — naming drift, infra binding gaps, and per-project component copies mean the analog is often 80% right and 20% subtly wrong in exactly the ways that cause rework.
+
+**The three-step process:**
+
+1. **Naming-variant sweep** — grep the analog concept in every casing before assuming you've found all its pieces:
+   ```bash
+   # e.g., for "stored location": loc-picker, LocationPicker, location_picker, LOCATION_PICKER, /api/location
+   grep -rn "<concept>" src/ functions/ shared/ --include="*.{js,jsx,ts,tsx,sql}"
+   ```
+   An endpoint, a React component, a database column, and a route may all name the same concept differently. Missing one causes the plan to assume shared infrastructure that isn't shared.
+
+2. **Full-stack read in order** — trace the analog from user action to data store:
+   ```
+   component → endpoint (functions/api/) → backend handler → infra binding (wrangler.toml / D1 / KV) → data model (migrations/*.sql) → any archived plan in docs/plans/
+   ```
+   Read each layer in this order. Shortcuts (reading only the component or only the migration) miss the binding gaps that break deploys.
+
+3. **Plan with explicit reuse/divergence callouts** — for each layer, state:
+   - **Inherits:** which proven pattern this feature reuses and from which file
+   - **Diverges:** where this feature intentionally differs and why
+
+   A plan with no divergence callouts usually means the analog wasn't read carefully enough, or the feature is genuinely trivial and doesn't need a formal plan.
 
 ## Examples of Past Rework This Prevents
 

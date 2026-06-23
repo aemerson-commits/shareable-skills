@@ -96,15 +96,29 @@ If your project has a cross-dashboard event log for errors and duplicates, surfa
 # Query the event log for recent unresolved errors
 # (adapt to your project's error tracking setup)
 npx wrangler d1 execute your-db --remote --command \
-  "SELECT dashboard, category, contentSummary, createdAt FROM event_log WHERE eventType='error' AND status='new' ORDER BY createdAt DESC LIMIT 20" \
+  "SELECT dashboard, category, contentSummary, createdAt FROM event_log WHERE eventType='error' AND status='new' ORDER BY createdAt DESC LIMIT 50" \
   --json
 ```
 
 **Surface in briefing:**
 - If no unresolved errors: report "Event Log: clear"
-- If errors exist: report count + top 3-5 as one-liners
-- Flag any items >7 days old as stale or backlogged
-- Don't auto-resolve — user reviews and marks Resolve / Acknowledge / Dismiss
+- If errors exist: report count + top 3-5 as one-liners: `relativeTime · source · category · summary[:80]`
+  - Group clusters (e.g. "5 of 8 are api-error from the same view" → suggest `/troubleshooting`)
+  - Flag items >7 days old as stale or backlogged
+- **Window guard**: with a large limit the response can pull a long backlog. Detail-list only the recent window (last ~14 days) in the briefing; roll everything older into "+N older unresolved (>14d)" so a backlog of stale rows can't crowd out today's real issues.
+- Don't auto-resolve — user reviews and marks Resolve / Acknowledge / Dismiss themselves
+
+### Step 8.5 — Pipeline & Plan of Attack (if project tracking is set up)
+
+If the project uses a gated project pipeline (e.g. Obsidian project notes with gate state), read the open notes and build three buckets:
+
+1. **Blocked on you** — projects at a gate requiring a human decision (e.g. threat assessment, signoff) OR any unanswered open question. These are the "Questions for Me" — the things only you can unblock. List each with its one-line question/decision. Lead the plan with this bucket.
+2. **Agent-ready (today's unattended queue)** — projects flagged as unattended-runnable with no unanswered questions, at an active gate (research, scope, build, verify, visual). These are what an overnight agent skill or `/advance-gate` can drive forward without you. Order by priority then value.
+3. **Needs scoping** — open projects not yet ready for unattended work, stuck early (no plan written). Candidates for a self-refill research pass if the agent-ready queue is thin.
+
+If an overnight agent run finished, surface what it produced — draft PRs to review, queued questions, the morning checklist — and fold its queued questions into bucket 1.
+
+Keep it to the top few per bucket; the full board lives in whatever project-tracking view you use.
 
 ### Step 9 — Friday Wisdom Check
 
@@ -115,9 +129,12 @@ date +%u
 
 If the result is `5` (Friday) and the `/wisdom` skill is installed, after presenting the briefing, ask:
 
-> **It's Friday — run weekly `/wisdom`?** This will audit skill health, review evolve instincts, and propose knowledge improvements.
+> **It's Friday — run weekly `/wisdom`?** This will audit skill health, review evolve instincts, fold in the latest `/insights` usage signal, and propose knowledge improvements.
+>
+> Wisdom folds in your Claude Code **usage report** (friction patterns + suggested improvements), but it can only *read* a report you've already generated — it can't run `/insights` itself. For the freshest signal, **run `/insights` first**, then `/wisdom`. If you skip it, wisdom still runs and just notes "no usage signal folded in."
 
-If the user says yes, invoke the `/wisdom` skill. Do NOT auto-run it — always ask first.
+If the user says yes, invoke the `/wisdom` skill. Do NOT auto-run it — always ask first. If they haven't run `/insights` in the last ~7 days, gently remind them it'll sharpen the wisdom pass.
+
 If `/wisdom` is not installed, skip this step silently.
 
 ## Output Format
@@ -133,7 +150,10 @@ Good morning! Here's your daily briefing:
 **Active alerts**:
 - alert 1
 - alert 2
-**Event Log**: clear / N new errors needing review (top 3-5 listed if >0)
+**Event Log**: clear / N new errors+duplicates needing review (top 3-5 listed if >0)
+**Pipeline — blocked on you**: N — the questions/decisions only you can clear (top 3-5; "all clear" if none)
+**Pipeline — agent-ready today**: N — the pre-scoped unattended queue (top 3-5 by priority), ready for overnight agent or /advance-gate
+**Night shift (if ran)**: state, draft PRs to review, queued questions
 **Ideas inbox**: X items / clear
 **Skill health**: Last audit {date} — {pass/due for audit}. Top 3 used skills last 7 days: X, Y, Z
 **Recent gotchas**: Any new entries worth noting

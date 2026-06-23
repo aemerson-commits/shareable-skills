@@ -129,6 +129,7 @@ The screenshot directory becomes the audit trail for the deploy. Archive it alon
 
 | Anti-Pattern | Why It's Bad | Do This Instead |
 |-------------|-------------|-----------------|
+| Dispatching without an explicit `model:` | Unpinned agents inherit the main-loop model (often the most expensive available); subagents can account for the majority of token spend | Every `Agent(...)` / workflow `agent()` call carries `model:` — use your cheapest capable model by default, escalate to a more powerful model only for critical review/security/migration gates (see `/model-selection`) |
 | Agent spawns agent spawns agent (3+ deep) | Context loss, coordination overhead | Max 2 levels deep |
 | All agents share one worktree | Race conditions on file writes | Each code-modifying agent gets own worktree |
 | Agent does research + implementation | Scope creep, context bloat | Separate research agents from implementation agents |

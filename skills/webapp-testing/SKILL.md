@@ -11,6 +11,35 @@ user-invocable: true
 
 **Chrome cleanup safety**: Never broad-scope-kill Chrome processes. Only close pages you opened via a specific page ID. "Browser already running" errors from chrome-devtools MCP mean the MCP profile is in use — reuse it, open an isolated context, or ask the user to close that window.
 
+## chrome-devtools MCP — "browser already running" recovery
+
+The `chrome-devtools` MCP server attaches to a **persistent** profile so auth SSO stays logged in. It does **not** close that browser at session end, so orphaned `chrome.exe` processes accumulate and keep the profile locked. A fresh session's first MCP call then fails with **"browser already running ... Use --isolated"**, and `list_pages` / `navigate_page` may all fail until the server establishes its own connection — this is the recurring intermittent failure.
+
+**Prefer the Playwright temp-script for deployed-page verification.** The headless loop below (throwaway context + auth cookie injection) has none of these failure modes — no persistent profile, no lock collision, no auth bounce. Use the chrome-devtools MCP only for interactive single-page poking, not routine post-deploy checks.
+
+**Recovery when the MCP IS needed and the lock is stuck:**
+
+1. Try `list_pages` → `select_page` first — if the running browser belongs to *this*
+   MCP server you can simply reuse it (no kill needed).
+2. If `list_pages` also fails, an orphaned Chrome holds the lock. Kill ONLY the
+   MCP-profile Chrome processes (never broad-kill):
+   ```powershell
+   Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" |
+     Where-Object { $_.CommandLine -like '*chrome-devtools-mcp*' } |
+     ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+   ```
+   Then retry `navigate_page`. This filter matches only chrome-devtools-mcp processes
+   — the user's real Chrome is untouched.
+3. Do NOT use `new_page` with `isolatedContext` for auth-gated pages — an
+   isolated context carries no auth cookie and bounces to the login page.
+   Isolated contexts only work for public URLs.
+4. A secondary MCP server using a separate profile is **not** auth-logged-in by
+   default — only a real fallback after a one-time manual login in that profile.
+
+> Permanent prevention (optional): a `SessionEnd` hook that runs the kill command
+> above would stop orphans from accumulating between sessions. Not yet wired —
+> ask the user before adding it to `settings.json`.
+
 To test web applications, write native Playwright scripts (Node.js or Python, depending on your environment).
 
 **Helper Scripts Available**:
@@ -42,7 +71,11 @@ For any visual UI verification, the reliable loop is:
 
 4. Edit the script (add selectors, clicks, state capture) — re-run — re-read screenshot.
 
-This beats the MCP chrome-devtools flow for scripted multi-step verification because the temp script is version-controllable (paste into the session notes) and re-runnable in the background.
+This beats the MCP chrome-devtools flow for scripted multi-step verification because the temp script is version-controllable (paste into the session notes) and re-runnable in the background. CF Access cookie injection (exchange service-token headers for `CF_Authorization` cookie via `ctx.addCookies()`) is required for CF-Access-protected apps — this beats the MCP because cookies are injected pre-navigation.
+
+For CSS/layout work: Read screenshot → Grep CSS class usage → Edit → `npm run build` → re-screenshot → repeat (2–3 rounds typical). The same Write→Screenshot→Read→iterate cycle applies to email-HTML composition (generate HTML draft → screenshot via Playwright → iterate on the template).
+
+See [references/iteration-loops.md](references/iteration-loops.md) for the full temp-script template, CF Access cookie injection detail, CSS debug loop, email-HTML composition loop, and minified deployed-bundle grep technique.
 
 ## Decision Tree: Choosing Your Approach
 

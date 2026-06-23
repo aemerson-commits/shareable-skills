@@ -1,5 +1,43 @@
 # Changelog
 
+## 5.2.0 (2026-06-23)
+16 skill updates synced from internal source + 3 new skills (46 → 49 total), sanitized. +661 / −380 on updated skills, plus ~1,900 lines of new skill/reference content.
+
+### New Skills
+- `/handoff` (Session Management) — write a disposable session-handoff doc to OS temp so a fresh session/agent can continue one in-flight task slice without re-deriving context
+- `/design-showcase` (Design) — build a side-by-side visual comparison of 3–7 design variants for a component/view as a self-contained HTML showcase, then pick a direction before implementing
+- `/design-reverse-engineer` (Design) — reverse-engineer a design system from a URL (typography, palette, spacing, components, micro-interactions) into a Claude-ready design spec
+
+### Development Pipeline
+- `/grill-me` — added Project Glossary section (read/challenge/sharpen project terms; commit glossary updates alongside the feature)
+- `/research-gate` — added Analog Feature Recon section (naming-variant sweep, full-stack read in order, plan with explicit reuse/divergence callouts)
+- `/write-plan` — added User Flow diagram section, full Agent Orchestration Spec (file-ownership map, stage design, model + merge-order assignment, guardrails), Execution Modes A/B/C, expanded Plan Quality Checklist
+- `/review-impl` — Phase 1 dispatches sonnet (mechanical) + skip rule when the orchestrator built the impl in-session; agent prompts moved to `references/review-checklists.md`; Phase 4 restructured (deterministic e2e-verify runner first, then design-judgment agent on what it can't score); expanded Agent B state/timing/race + refactor checklist
+- `/cascade-orchestration` — added "dispatch without an explicit `model:`" anti-pattern row
+
+### Build Orchestration
+- `/worker-build` — added CF API token section (OAuth-token extraction pattern, placeholders), Bug-Class Sweep section, improved cron numeric-DOW caveat
+
+### Quality & Verification
+- `/pre-merge-review` — added Vibe-Coded Pre-Launch Checklist, Diff-Level Review Pass, "scale the fan-out to the diff" guidance, Component-Deletion & CSS-Graduation discipline, Audit Grep Pack, Refactor/Sweep/Fix-Batch discipline
+- `/schema-check` — added Migration Check section (migrations as canonical schema docs, tracked-apply vs `d1 execute` decision tree, destructive-migration exception)
+- `/webapp-testing` — added chrome-devtools MCP recovery section, "behind another auth" decision branch, UI Label Audit; created `references/iteration-loops.md` + `scripts/test-local.js`
+
+### Design
+- `/frontend-design` — added multi-series chart legend enforcement + color-aware tooltip example, Modal component pattern, CSS pattern audit
+
+### Session Management
+- `/start-day` — added 14-day window guard with older-rollup, Pipeline & Plan of Attack (blocked-on-you / agent-ready / needs-scoping buckets), usage-insights reminder before the weekly wisdom check
+- `/session-notes` — added incremental-append preference (token economy), Update Project Frontmatter step, sonnet routing
+- `/insight` — added p75 (not mean) RUM guidance with nearest-rank SQL, error-trend hot-spot surfacing
+
+### Skill Maintenance & Learning
+- `/skill-audit` — added evidence rule (exact-line quoting, hallucination-drop policy, Grep-vs-Explore dispatch)
+- `/wisdom` — added usage-signal subsystem (`ingest-usage.mjs` + Phase 1 Step C + Phase 2 usage cross-reference with corroboration/coverage/novel-friction), 2 safety rules
+
+### Reference & Conventions
+- `/model-selection` — added the full model stack table, effort mechanics, pre-tiered agents (`routine` / `critical-reviewer`), workflows section, updated routing matrix; generic model-name placeholders
+
 ## 5.1.0 (2026-05-14)
 27 skill updates synced from internal source, sanitized to match v5.0.0 precedent. +772 / -205 lines.
 
@@ -71,7 +109,7 @@
 - Added categories to manifest.json for skill discoverability
 - Moved scripts/ into skills/evolve/scripts/ (evolve-specific, not general infra)
 - Fixed missing YAML frontmatter on debug-collaborate and html-slides
-- Removed HSS/Huntington company references from html-slides
+- Removed internal company references from html-slides
 - Updated GitHub repo description
 - Updated installation docs for new structure
 
