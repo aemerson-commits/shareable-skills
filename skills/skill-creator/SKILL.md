@@ -116,6 +116,8 @@ This goes without saying, but skills must not contain malware, exploit code, or 
 
 Prefer using the imperative form in instructions.
 
+**External CLI dependencies**: If the skill shells out to a third-party CLI (a note-taking app, a package manager, a cloud tool), verify the exact subcommands still work in the currently-installed version before documenting them. CLI tools rename or remove subcommands across releases without warning — a skill that copies stale command syntax from memory or old docs fails silently at runtime, often not until months later when someone actually triggers that step. Confirm with `--help` or a live dry run instead.
+
 **Defining output formats** - You can do it like this:
 ```markdown
 ## Report structure

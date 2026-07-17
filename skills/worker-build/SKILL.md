@@ -308,3 +308,16 @@ For large batches (e.g., 10-15 workers), expect 60-90 seconds total — sequenti
 - Cron → read source → transform → write to KV/D1 → reconcile
 - Hash-based change detection
 - Rate limiting on mutations (D1: batched)
+
+## Business-Logic E2E Verification (beyond deploy-health)
+
+A passing `/health` check, a registered cron trigger, and a clean `wrangler deploy` exit code together prove the worker **deployed** — they say nothing about whether its actual read/write logic is correct. For any worker whose run path or cron writes to a database or cache, verify the *behavior* with a seed → trigger → verify → cleanup cycle:
+
+1. **Seed** known state directly in the datastore the worker reads/writes.
+2. **Trigger** the worker's run path (its manual-trigger HTTP endpoint, or invoke the scheduled handler directly).
+3. **Re-query the datastore** to confirm the mutation actually happened — check the specific rows/keys changed, not just that the endpoint returned 200. A 200 response only proves the handler didn't throw; it doesn't prove the write executed or matched any rows (an `UPDATE ... WHERE` that matches zero rows still returns success).
+4. **Clean up** the seeded fixtures so the environment isn't left holding test data.
+
+If the worker maintains its own success/failure tracking (a "last successful run" key, an alert-on-failure state), cross-check that state after the trigger too — a stale or missing success marker means the run didn't reach its success path even though the HTTP response was 200.
+
+This is the layer above deploy-health checks: it's the difference between "the worker ran" and "the worker did the right thing."

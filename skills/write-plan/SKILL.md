@@ -242,10 +242,19 @@ multi-stage specs already describe — just follow the spec.
 
 ## Plan Maintenance
 
-- **Update the plan** if the approach changes during implementation
-- **Mark completed tasks** with [x] as they finish
-- **Add discovered tasks** that weren't in the original plan (scope creep flag — ask user first)
-- Plans are reference documents, not sacred — adapt if reality diverges
+A plan doc is a **living surface**, not a write-once artifact, for any feature that spans more than one session:
+
+- **Re-read it to recover scope** at the start of each session on that track — the plan is the fastest way back into context, faster than re-deriving from code or git history.
+- **Edit it progressively** as work resolves, gates clear, and decisions land — check off tasks with [x], record what shipped, park open questions inline.
+- **Fork a new dated doc** when a distinct sub-track emerges, rather than overloading one file (`YYYY-MM-DD-<topic>.md` + `YYYY-MM-DD-<topic>-phase2.md`). Cross-link them.
+- **Keep it in sync with any other tracking surface** for the same work (a project-status board, a memory file) — the plan doc is the detailed record; drift between them is the failure mode.
+- **Update the plan** if the approach changes during implementation.
+- **Add discovered tasks** that weren't in the original plan (scope creep flag — ask user first).
+- Plans are reference documents, not sacred — adapt if reality diverges.
+
+### Before designing a shared core across parallel worktrees
+
+When a plan unifies two implementations that live in separate branches/worktrees, **read BOTH implementations by their actual current state first** — do not design the shared/convergence core from one side plus assumptions about the other. Confirm each file exists on its branch before writing the convergence spec; a plan built on an assumed second implementation drifts immediately once you actually read it.
 
 ## When NOT to Write a Plan
 

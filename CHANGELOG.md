@@ -1,5 +1,40 @@
 # Changelog
 
+## 5.3.0 (2026-07-17)
+18 skill updates synced from internal source (changes since 2026-06-23), sanitized. +206 / −11 lines. No new skills (49 total).
+
+### Development Pipeline
+- `/research-gate` — added Scratchpad HTML Discovery Page pattern for stakeholder scoping sessions
+- `/write-plan` — expanded living-plan-doc conventions (re-read to recover scope, progressive edits, sub-track forking); added "read both implementations before designing a shared core across parallel worktrees"
+- `/cascade-orchestration` — added Seed Agents With Known Hub Paths (name shared hub files up front in fan-out prompts)
+
+### Build Orchestration
+- `/deploy-all` — ASCII-only commit messages (dash-parsing CI failure), full-redeploy-after-any-secret-change, verify-production-branch safety bullet
+- `/worker-build` — added Business-Logic E2E Verification section (seed → trigger → verify → cleanup beyond deploy-health checks)
+- `/worktree-guard` — added Post-Merge Teardown (immediate cleanup + periodic hygiene audit), Sibling Worktrees (per-concurrent-session isolation: create/bootstrap/teardown), shared-hub "keep worktree" conflict rule
+
+### Quality & Verification
+- `/pre-merge-review` — added mass-assignment / path-traversal / SSRF checks to Profile A; shared-database-across-environments migration guard in Scalability
+- `/schema-check` — added Profile the Data Before Designing a Data Feature (read-only SELECT battery); Prefix-LIKE Index Is Often a No-Op (confirm with EXPLAIN QUERY PLAN)
+- `/webapp-testing` — added Server-Generated HTML Template → PNG verification workflow
+- `/data-reconciliation` — added snapshot-before-destructive-fix rule (rollback artifact before DELETE/UPDATE)
+
+### Design
+- `/frontend-design` — added Collapsible Groups (Expand/Collapse all) pattern; Aligning an Existing Component to the Design System audit loop
+
+### Session Management
+- `/start-day` — batched shell calls, `git pull --rebase --autostash` + regen-file conflict recipe, landed-state guard (verify memory claims against live git/CI), skip-if-already-ran wisdom freshness check
+- `/session-notes` — derived/materialized backlog files: update sources and regenerate, never hand-edit; route recurring friction into a structured append-only log
+- `/insight` — replaced broken frontmatter-write subcommand workaround with embedded-YAML-block-in-create + verify-by-read
+
+### Skill Maintenance & Learning
+- `/skill-audit` — explicit `model:` pinning guidance for dispatched check agents
+- `/skill-creator` — External CLI dependencies: verify third-party subcommands exist in the installed version before documenting them
+- `/wisdom` — Freshness reuse (skip re-running skill-audit if a <7-day result exists); Stamp the run-log at end of Phase 3
+
+### Reference & Conventions
+- `/throwaway-script` — added Execution section (`node --check` syntax gate + deterministic-marker bracketing); Cache/KV inspection script shape
+
 ## 5.2.0 (2026-06-23)
 16 skill updates synced from internal source + 3 new skills (46 → 49 total), sanitized. +661 / −380 on updated skills, plus ~1,900 lines of new skill/reference content.
 

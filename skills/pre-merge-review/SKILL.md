@@ -41,6 +41,9 @@ Simulate three attacker profiles against all exposed surfaces:
 - Rate limiting coverage on all public-facing endpoints
 - CSP, HSTS, X-Frame-Options, X-Content-Type-Options on all responses
 - Input validation on all user-controllable parameters (SQL injection, XSS, path traversal)
+- **Mass assignment**: UPDATE/INSERT endpoints bind an explicit field allowlist — never spread or iterate the request body into SET clauses or column lists. A client adding an unexpected field (`"status":"approved"`, `"role":"admin"`) to the body must not change columns the endpoint didn't intend to expose.
+- **Path traversal on file/key builders**: any endpoint that builds a storage key, file path, or filename from a caller-supplied param validates it against a strict pattern (e.g. `^[\w-]+$`-class) so `../`, encoded slashes, or absolute paths can't escape the intended prefix.
+- **SSRF on server-side fetches**: no backend route fetches a URL/host/path assembled from caller input beyond an allowlisted route map. Treat any caller-influenced fetch target as a finding, especially on services with access to internal/private-network hosts.
 
 **Profile B — Compromised Regular User (authenticated)**
 - Can they access admin endpoints? (RBAC enforcement on every admin route)
@@ -116,6 +119,7 @@ Fast-moving / AI-generated ("vibe-coded") features ship correct-looking UI on to
 - Worker CPU time budget
 - Subrequest limits in complex operations
 - Data growth patterns — will current approach work at 2x, 5x, 10x scale?
+- **Shared database across environments**: if a migration or schema change applies automatically to a database instance shared by multiple environments (e.g. one DB backing both a dev/staging deployment and production), treat any change pushed to the lower environment as an immediate production change. For a breaking change (rename, DROP, constraint rebuild) on a table production reads: split additive-now work from destructive-later work so production survives the first apply, verify preconditions in the target environment before applying, and confirm the change live in *every* environment that shares the database — a single-environment smoke test is insufficient.
 
 ### 4. UX Consistency Review
 

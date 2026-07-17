@@ -59,6 +59,8 @@ git commit -m "<descriptive message>"
 git push origin dev
 ```
 
+ASCII dashes only in the commit message — some CLI deploy tools reject em/en-dashes in a `--commit-message` flag: the deploy can succeed while the CI dashboard shows the step failed on a parse error, which reads as a flake.
+
 ### 5. Deploy Changed Projects (Parallel)
 
 For dev deploys (default):
@@ -131,6 +133,8 @@ cd workers/<name> && npx wrangler deploy
 
 IMPORTANT: After `wrangler deploy` for workers, verify cron triggers are actually registered via the CF API — wrangler output is not reliable. See `/worker-build` § "Cron Trigger Verification" for the full verification pattern. `wrangler secret put` can also silently unregister crons; always redeploy after setting secrets.
 
+IMPORTANT: After ANY secret change (Pages or Workers), immediately do a full redeploy. A secret update alone can create/activate a deployment that runs on a stale or incomplete code bundle — some endpoints silently 5xx while others keep working, and it's easy to misread as a code bug instead of a deploy-ordering issue.
+
 ## Model Guidance
 
 When dispatching agents for parallel deploy work, prefer `model: "opus"` (at max effort) for any agent doing code review, security audit, or architectural decisions. Use `model: "sonnet"` for routine build/deploy/verification tasks.
@@ -138,6 +142,7 @@ When dispatching agents for parallel deploy work, prefer `model: "opus"` (at max
 ## Safety
 
 - NEVER deploy to production without explicit `--prod` flag
+- ALWAYS use the flag/setting that targets the true production branch — a "preview" or "staging" branch flag often only deploys to an alias URL, never the live production URL, and silently succeeding there while believing you shipped to prod is a recurring failure mode worth guarding against explicitly
 - ALWAYS build before deploying (`dist/` must be fresh)
 - ALWAYS deploy from the project directory (not repo root — may skip Functions bundle)
 - ALWAYS verify after deploy — never claim "deployed" without HTTP verification

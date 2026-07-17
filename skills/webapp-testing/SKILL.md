@@ -306,6 +306,19 @@ with sync_playwright() as p:
 
 3. **Execute actions** using discovered selectors
 
+## Server-Generated HTML Template → PNG Verification
+
+For a report/document/email HTML template that's rendered server-side with no live URL to navigate to, don't reason about layout from the template source — render it and look:
+
+1. Write a throwaway script that imports the template function/module directly (no HTTP round-trip, no server needed).
+2. Call the template function with representative and edge-case data to get the HTML string.
+3. `page.setContent(html)` in a headless Playwright page.
+4. Screenshot to a scratch path.
+5. Read the screenshot, compare against the goal, iterate — edit the template, rerun, re-screenshot.
+6. Delete the throwaway script when done, or keep it if it should become a repeatable check.
+
+A computed or predicted layout is never visual proof — bounding-box math or "the HTML string contains the right elements" doesn't establish that a report, invoice, or email actually renders correctly at a usable size. Only a rendered screenshot does.
+
 ## Common Pitfall
 
 - **Don't** inspect the DOM before waiting for `networkidle` on dynamic apps

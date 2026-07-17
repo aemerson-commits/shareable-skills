@@ -55,6 +55,12 @@ import process from 'node:process';
 })().catch(err => { console.error(err); process.exit(1); });
 ```
 
+## Execution
+
+**Syntax-check before the first real run**: `node --check path/to/script.mjs` catches import typos and bracket errors instantly, instead of burning a full secrets-load + network round trip to discover a mistake. This matters more once the script is about to touch a production system — a syntax error caught here is far cheaper than one caught mid-run against live infrastructure.
+
+**Bracket the run with a deterministic marker** (`echo MARK_START; ...; echo MARK_END`) when the output needs to be trusted for a decision — in a long agent session, tool-result channels can occasionally return truncated or misleading output, and a marker plus the process's actual exit code is more trustworthy than the narrative text alone.
+
 ## Loading .env secrets
 
 Two common approaches:
@@ -160,6 +166,10 @@ const result = await pool.request().query('SELECT TOP 5 * FROM your_table');
 console.log(JSON.stringify(result.recordset, null, 2));
 await pool.close();
 ```
+
+### Cache/KV inspection
+
+Most cache and KV APIs offer a CLI or SDK "get key" call — prefer that over writing a script when a single lookup will do. Reach for a script only when you need to correlate multiple keys or transform the result.
 
 ### Smoke verification (post-deploy)
 

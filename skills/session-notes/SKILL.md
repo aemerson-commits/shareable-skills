@@ -126,6 +126,8 @@ File: `{{project}}/Roadmap.md`
 "$OBS" append path="{{project}}/Roadmap.md" content="\n- [ ] {new item}" 2>&1 | grep -v "Loading\|out of date"
 ```
 
+**If you maintain a derived/materialized backlog or queue file** (e.g. a generated "what's ready to work on" list), don't hand-edit that file — update its SOURCES (the roadmap item, the todo, the project note) and regenerate it. A derived artifact that gets hand-edited drifts from its sources the next time it regenerates, silently discarding the manual edit.
+
 ### 3a. Update Project Frontmatter (MANDATORY when a project shipped or changed status)
 
 If your vault tracks individual projects as separate files, edit their frontmatter when status changes. Use the Edit tool directly (`property:set` is broken in some Obsidian versions — see Step 1):
@@ -212,6 +214,7 @@ If a skill was relevant but NOT invoked (e.g., should have used `/research-gate`
    - Completed task → update MEMORY.md
    - Outdated skill → update the skill
 4. **Never repeat** a mistake that's already documented in memory
+5. **Route recurring friction, don't just note it.** A one-off self-critique in a prose session note is easy to write and easy to lose — nobody re-reads last month's notes looking for a pattern. If the same friction (a repeated mistake, a recurring workaround, a process gap) shows up more than once, capture it somewhere structured and append-only that you can query for "what keeps recurring and hasn't actually been fixed" — even a simple dated one-liner in a dedicated log is enough to turn a vague feeling ("this keeps happening") into a countable, promotable signal.
 
 **Architecture decisions**: Prioritize critical thinking and scalable architecture over speed. Ask high-level questions to build a framework. When a function/feature has changed scope, point it out and ask if the architecture should change.
 

@@ -112,6 +112,28 @@ New migration should be numbered sequentially (e.g., `0018_*.sql` after `0017_*.
 
 For data-seeding migrations, use `INSERT OR IGNORE` and re-verify that the expected seed rows exist post-apply.
 
+## Profile the Data Before Designing a Data Feature
+
+Structure (columns / keys / bindings) is only half the picture. Before designing any feature that **derives** from a production table — a writeback automation, a classifier, a read-time enrichment, a backfill — don't guess the shape from the schema. Run a short battery of **read-only** SELECTs against the real data, one analytical question each:
+
+1. **Coverage** — total rows / rows with a usable value in the target column / distinct keys.
+2. **Sample values** — `SELECT <col> ... LIMIT 20` to see the real format and any junk.
+3. **Distribution** — `GROUP BY` the discriminating column.
+4. **Aggregate summary** — the number the feature will actually compute.
+5. **Provenance of the gap** — which rows *lack* the column, grouped by source (that gap is often the automation's actual target).
+
+Interleave the probes with reading the code that produces the rows, so each gap maps to a fill path. Nothing is written — the output feeds the design. (Some engines cap the number of terms in a compound/UNION query — batch large multi-table probes into smaller groups if you hit that limit.)
+
+## Prefix-LIKE Index Is Often a No-Op — Confirm with EXPLAIN QUERY PLAN
+
+Before adding `CREATE INDEX ... ON t(col)` to make `col LIKE ? || '%'` "seekable," verify it actually helps — on SQLite-family engines (including serverless/edge SQLite variants) it frequently does nothing. Three stacked reasons:
+
+1. Default `LIKE` is **case-insensitive**, and the LIKE→range optimization only fires when the index collation matches — a plain binary index is silently ignored (full `SCAN`); you must declare `CREATE INDEX ... ON t(col COLLATE NOCASE)`.
+2. Even with the NOCASE index, a **parameterized** `LIKE ?` on a large table won't range-seek without histogram statistics (e.g. SQLite's `STAT4`) — the planner can't estimate the range's selectivity at plan time and defaults to a full scan. Lightweight/serverless SQLite deployments often lack these stats entirely (no `STAT4`, no auto-`ANALYZE`), making this the common case.
+3. Forcing it with `INDEXED BY` yields a full *index* scan, still not a range seek.
+
+What reliably seeks: **equality** (`col IN (...)` / `col = ?`) on an indexed column, or a **literal-inlined** prefix (`LIKE 'abc%'`, with injection-safe construction). Practical rule: before adding a prefix-LIKE index "for performance," confirm with `EXPLAIN QUERY PLAN` that it actually produces a `SEARCH ... (col>? AND col<?)` — otherwise prefer an equality rewrite or accept the scan.
+
 ## Anti-Patterns
 
 - NEVER write a database query without checking the schema first

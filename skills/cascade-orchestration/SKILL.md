@@ -110,6 +110,12 @@ Main Agent reads git diff
 - Skip unnecessary agents to save context and cost
 - Log which agents were dispatched and which were skipped
 
+## Seed Agents With Known Hub Paths
+
+When fanning out audit/research agents for a cross-cutting concern (auth, caching, email, shared utilities), list the convergence files explicitly in EVERY agent's prompt instead of letting each agent rediscover them independently via grep. If your codebase has a `shared/` or `common/` layer imported by many consumers (CORS/auth helpers, rate limiting, alert/notification plumbing, shared UI utilities), name those specific files up front.
+
+Each hub file is imported by many consumers. An agent that doesn't already know that spends its first pass rediscovering the hub via grep; a parallel sibling agent independently burns the same effort rediscovering it a second time. Seeding the list up front turns N redundant discovery passes into zero — cheap to do (one line per file) and it compounds with agent count.
+
 ## Multi-Project Deploy-Time Smoke Pattern
 
 After deploying multiple projects, capture screenshots for a permanent audit trail of "what shipped today":

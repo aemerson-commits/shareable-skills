@@ -103,18 +103,21 @@ Surface: total errors this week, top 3 categories by count, ratio of resolved/di
 
 ### 2. Generate Report
 
-**Create the insight file via CLI:**
+**Create the insight file via CLI, with frontmatter embedded in the content:**
+
+> Some Obsidian CLI versions have removed the `property:set` write subcommand entirely (it can exit non-zero with "command not found" on newer releases), while the read-side `properties` subcommand keeps working. Rather than depend on a write subcommand that may not exist, embed the frontmatter as a literal `---` YAML block directly in the `create` call's content — that always works, since it's just markdown text.
 
 ```bash
-"$OBS" create path="{{project}}/Insights/{YYYY-MM-DD}.md" content="{report content}" 2>&1 | grep -v "Loading\|out of date"
+"$OBS" create path="{{project}}/Insights/{YYYY-MM-DD}.md" content="---\ntype: insight\nweek-ending: {YYYY-MM-DD}\n---\n\n{report content}" 2>&1 | grep -v "Loading\|out of date"
 ```
 
-**Set frontmatter** (edit directly if `property:set` is broken in your Obsidian version):
+**Verify the frontmatter took:**
 
 ```bash
-"$OBS" property:set name="type" value="insight" path="{{project}}/Insights/{YYYY-MM-DD}.md" 2>&1 | grep -v "Loading\|out of date"
-"$OBS" property:set name="week-ending" value="{YYYY-MM-DD}" path="{{project}}/Insights/{YYYY-MM-DD}.md" 2>&1 | grep -v "Loading\|out of date"
+"$OBS" properties path="{{project}}/Insights/{YYYY-MM-DD}.md" 2>&1 | grep -v "Loading\|out of date"
 ```
+
+If your installed CLI does support `property:set`, that route still works — the embedded-frontmatter approach above is just the more portable default since it has no dependency on that subcommand existing.
 
 Template:
 

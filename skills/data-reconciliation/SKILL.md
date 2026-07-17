@@ -172,6 +172,8 @@ Based on the divergence analysis:
 4. If **frontend filter**: Identify the component, the filter condition, and whether the upstream data or the user's selection needs to change.
 5. If **source data wrong**: Flag as "source data issue — check directly in source system".
 
+**Snapshot before any destructive fix.** When the fix involves a DELETE or UPDATE against live data, capture a rollback artifact FIRST: run a SELECT of the exact rows about to change and save it (a file with the original values, or a generated `UPDATE ... SET <col>=<original>` script). Verify row counts match expectations before executing, and keep the artifact until the fix is confirmed good. A reconciliation that "fixes" the wrong rows without a snapshot is unrecoverable.
+
 ## Escalation
 
 - If divergence is in code logic (not data): escalate to `/deep-root-cause`

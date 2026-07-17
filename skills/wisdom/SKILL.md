@@ -43,6 +43,8 @@ Phase 3 (parallel, Sonnet agents):
 
 Launch two agents in parallel:
 
+> **Freshness reuse**: if `/skill-audit` was already run in the last 7 days and its results are still available, skip re-running it and feed the existing results into Phase 2 instead. Skill-audit is a multi-agent pass that can burn a few hundred thousand tokens — running it twice in the same week duplicates that cost for no new signal.
+
 **Agent A (Sonnet):** Run `/skill-audit`. Capture the summary table and any issues found. This ensures skills are healthy before we propose changes to them.
 
 **Agent B (Sonnet):** Run `/insight` to generate the weekly Obsidian report.
@@ -248,6 +250,12 @@ For approved Tier 2/3 items, dispatch parallel Sonnet agents:
 - **Resolve contradictions (Tier 3)**: One agent per contradiction
 
 After execution, report what was changed. Update promoted instincts to `status: promoted` (Tier 1 follow-up).
+
+**Stamp the run-log** so a proactive weekly trigger (e.g. a startup routine that asks "run weekly wisdom?" on Fridays) knows wisdom already ran this week and doesn't ask again:
+
+```bash
+echo "$(date +%Y-%m-%d) wisdom run" >> .claude/skills/wisdom/last-run.log
+```
 
 **Safety note on tiering**: If Phase 2 analysis is suspect (e.g., the analyzer reports zero instincts or cannot find input files), the operator MUST abort before auto-applying Tier 1 — bad analysis could mass-mark real instincts as covered against nonexistent skills. Always sanity-check the report summary table before trusting Tier 1.
 

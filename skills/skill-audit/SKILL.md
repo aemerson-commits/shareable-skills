@@ -29,6 +29,8 @@ Run checks 1-4 in parallel via subagents. Check 5 requires the current session's
 > Explore reads excerpts and trades exhaustive coverage for speed, which is the wrong
 > trade for a verification task.
 
+> Pin `model: "sonnet"` on every dispatched agent — it keeps a multi-agent audit cost-predictable and consistent regardless of what model is driving the parent session, and satisfies any project policy that requires subagent dispatches to name an explicit model.
+
 ### Check 1: Staleness Detection
 
 Dispatch a general-purpose agent:

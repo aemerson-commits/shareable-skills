@@ -241,6 +241,16 @@ Use a shared modal component with:
 - Escape key close
 - Scroll lock on body while open
 
+### Collapsible groups — Expand all / Collapse all
+
+Any view that renders a list of collapsible sections/accordions/groups MUST offer bulk **Expand all / Collapse all** controls — don't re-implement per-group `useState(open)` with no bulk control, and don't let each new grouped view invent its own toggle shape.
+
+- Extract a shared hook (`useExpandCollapseAll(defaultOpen)`) that returns `{ isOpen(id), toggle(id), expandAll(), collapseAll() }` and tolerates a changing id set — newly-loaded groups should inherit the current default so it works before data loads and after the list grows.
+- Extract a paired control component for the toolbar/filter bar (`<ExpandCollapseControls onExpandAll={...} onCollapseAll={...} />`).
+- Lift the per-group open state to the parent so the bulk controls actually drive every group, rather than each group owning its own isolated state.
+
+Apply this to every new grouped/accordion view, not just the first one that needed it — it's cheap to reuse and expensive to reinvent per view.
+
 ## CSS Architecture
 
 | Location | Scope |
@@ -259,6 +269,20 @@ When rewriting a view to use Tailwind + shadcn:
 3. Use Tailwind utilities for layout and spacing
 4. Remove the old CSS rules from App.css
 5. Keep domain-semantic styles (status colors, chart configs) in CSS or constants
+
+## Aligning an Existing Component to the Design System
+
+Lighter than a full rewrite — use this when reskinning a component that already works but has drifted off-token (hardcoded hex colors, arbitrary px values, `transition: all`). Observed working loop, confirmed across multiple sessions:
+
+1. **Read the source of truth first** — the token file (this doc's Color Tokens section, or wherever your project defines them) plus the reference primitives the rest of the app already uses (card/badge/button/modal components). Match those; don't invent a parallel style.
+2. **Grep the target for hardcoded drift** before editing:
+   ```bash
+   grep -nE "#[0-9a-fA-F]{3,6}|rgba?\(" <target>.css   # raw colors that should be tokens
+   grep -nE "[0-9]+px" <target>.css                     # arbitrary sizes vs your spacing/type scale
+   grep -n "transition: all" <target>.css               # vague transitions — name the properties
+   ```
+3. **Rewrite CSS to tokens** — swap raw values for token references, arbitrary px for the spacing/type scale, `transition: all` for explicit named properties. Keep domain-semantic colors (status/category colors that are intentionally not themed) as-is.
+4. **Build and verify in a real browser** — a token swap can silently change contrast or layout. Look at an actual screenshot, not bounding-box math or computed geometry.
 
 ## Accessibility
 

@@ -142,3 +142,13 @@ When a new feature mirrors an existing one, study the analog end-to-end before p
 | Cache compression bug | Read raw cache, got garbage | "Cache keys are compressed" in Known Gotchas |
 | Email worker duplication | 4 identical workers built serially | Shared pattern exists, could template |
 | Auth bypass | CRITICAL vulns shipped | Security audit docs list auth requirements |
+
+## Scratchpad HTML Discovery Page (stakeholder scoping deliverable)
+
+For discovery/scoping *with a stakeholder* — as opposed to writing code — a single self-contained HTML "cockpit" page is often the fastest way to converge, faster than a doc or a verbal back-and-forth. Assemble it in a scratch/temp location, named for the topic, fully inline (CSS + JS + data embedded so it opens straight from disk, no server needed), and iterate it in place across review rounds. Fold each round's decisions back into wherever the project tracks scoping outcomes so they aren't stranded in a throwaway file.
+
+Pick the right tool for the deliverable:
+- **Scratchpad HTML page (this)** — throwaway, local-only, iterated live during a scoping conversation.
+- **A hosted artifact** — only when the stakeholder needs a *shareable, linkable* page.
+- A **design-variant showcase** — comparing design *options* for a component.
+- A **slide deck** — a linear *presentation*.
