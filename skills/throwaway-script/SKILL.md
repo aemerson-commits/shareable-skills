@@ -19,11 +19,29 @@ Use this pattern for a single-shot script that needs `process.env.*` from `.env`
 
 | Path | When to use |
 |------|-------------|
-| OS temp dir (e.g. `/tmp/<name>.mjs` on Linux/macOS, `C:/tmp/<name>.mjs` on Windows) | True throwaway — won't be re-run. No cleanup needed. |
-| `.claude/reviews/<feature>-verify.mjs` (or similar audit dir in your repo) | Kept as audit trail. Re-runnable. Use when the script documents a verification step. |
-| Project root | **Never.** Pollutes git working tree. |
+| Session scratchpad / OS temp dir (e.g. `$SCRATCHPAD` if the harness injects one, else `/tmp/<name>.mjs`) | **Default.** Investigation probes, DB/SQL behavior tests, API shape checks. Isolated from the repo, so nothing exploratory can be accidentally committed. |
+| Inside the repo — a session worktree, or `.claude/reviews/<feature>-verify.mjs` | **Required whenever the script has a BARE npm import** (see below). Also use when the script should be committed as evidence of a verification. |
+| Project root | **Never.** Pollutes the git working tree. |
 
-Default to the OS temp dir. Switch to a tracked `.claude/reviews/` (or equivalent) only when you want the script committed as evidence of a verification.
+Default to the scratchpad. Move into the repo when you need real dependencies, or when you want the script committed as evidence.
+
+### The bare-import trap
+
+`node_modules` lives in the **repo**. A script written to an OS scratchpad resolves bare
+specifiers from its own directory upward and never reaches it — `import { chromium } from
+'playwright'` dies with `ERR_MODULE_NOT_FOUND`. Built-ins (`node:fs`), relative imports
+(`./x`), absolute paths, and global `fetch` all work fine from anywhere; a script using only
+those is the healthy scratchpad case.
+
+The tell is that this looks like a missing dependency and isn't — the package is installed,
+just not reachable from where the file sits. **Fix by moving the script into the repo**, not
+by installing anything (a stray install into a shared tree is far more damaging than the
+original problem).
+
+Worth a write-time guard if you hit it more than once: a hook that fires only on
+*out-of-repo path × bare specifier* catches it before the write, which is cheaper than a
+write → run → diagnose → move cycle. One project marked this "cheap to hit, cheap to fix"
+and closed it, then paid that cycle three more times in four days before gating it.
 
 ## Script form (ES module)
 

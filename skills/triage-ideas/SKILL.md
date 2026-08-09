@@ -10,11 +10,14 @@ Process the Ideas inbox — route each idea to the appropriate project roadmap.
 
 **Obsidian CLI** (for read/search only — no edit command):
 ```bash
-OBS="<path-to-obsidian-binary>"
+OBS="/c/Program Files/Obsidian/Obsidian.exe"
+[ ! -f "$OBS" ] && OBS="/c/Users/${USERNAME:-$USER}/AppData/Local/Programs/obsidian/Obsidian.exe"
 # All commands need 2>&1 | grep -v "Loading\|out of date"
+# NOTE: $USER is EMPTY in the Bash tool on Windows ($USERNAME carries it). A bare $USER
+# builds /c/Users//AppData/... which fails [ -f ] and reads as "not installed".
 ```
 
-**Obsidian vault path**: `{{vault_path}}`
+**Obsidian vault path**: `{{vault_path}}` — resolve at runtime; don't hardcode a username.
 **Roadmap file**: `{{vault_path}}/{{project}}/Roadmap.md`
 **Ideas file**: `{{vault_path}}/Ideas.md`
 

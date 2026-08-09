@@ -258,7 +258,40 @@ Also check any shared utility module imported by most workers — a bug there pr
 
 **Fix all affected workers in one pass, in the same commit.** Don't defer to follow-up commits — they consistently don't happen.
 
+## A Worker Deploy IS a Production Release
+
+Unlike paired dev/prod Pages-style projects, an edge worker is typically a **single
+deployment**: `wrangler deploy` (or equivalent) from **any branch and any working tree**
+puts that code straight into production. Two consequences:
+
+- A review note saying worker code is "on the dev branch, inert until deployed" is a **wrong
+  mental model** — it is inert only because nobody has deployed yet, and deploying *is* the
+  production change. Finish the security/equivalence review BEFORE the deploy, not after.
+- Once deployed, your **release branch is behind running production** until the merge lands,
+  so a later deploy or rollback from that branch **silently reverts live behavior**. After a
+  manual worker deploy, merging is the action that *closes* the gap, not the risky one.
+
+Corollary: "manual-deploy carry" in a release note describes **repo** state, never live
+state. Confirm what is actually running with `wrangler deployments list` rather than trusting
+a note.
+
 ## Bulk Worker Redeploy Pattern
+
+> **⚠️ Before a bulk redeploy after a shared-module change: confirm the shared module still RESOLVES from a worker.**
+> Workers are usually NOT npm workspaces — each has its own `node_modules/`. When a worker
+> imports a shared module by relative path (`../../../shared/<mod>/index.js`), the bundler
+> resolves that shared file's **bare** imports from *shared's* location upward — **never**
+> the consuming worker's `node_modules`, even when the package is installed there. So adding
+> a bare npm import to a shared module breaks every consuming worker's deploy while builds,
+> lint, and the full test suite all stay green. Symptom: the deploy exits with
+> `Could not resolve "<pkg>"` pointing at the *shared* file.
+> **Fix:** declare the dependency on the shared package's own `package.json` so the workspace
+> hoists it, then reinstall from the repo root.
+> **Cheap pre-check:** `cd workers/<one-consumer> && npx wrangler deploy --dry-run` — if one
+> consumer resolves, the rest will.
+> This class survived a static byte-equivalence review that found nothing; **only the deploy
+> can see it.** An extraction into a shared module consumed by a worker is not verified until
+> a deploy (or dry-run) succeeds.
 
 For shared utility changes that affect many workers, redeploy in parallel rather than serially:
 

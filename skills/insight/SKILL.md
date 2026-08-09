@@ -10,8 +10,21 @@ Generate a weekly insight report summarizing development metrics, progress, and 
 
 ## Obsidian CLI
 
-**Binary**: Auto-detect Obsidian installation path.
-**Active vault**: Set `{{vault_path}}` to your Obsidian vault location.
+**Binary**: Auto-detect the Obsidian installation path — a system-wide install and a per-user
+install can both exist, so probe rather than hardcode:
+
+```bash
+OBS="/c/Program Files/Obsidian/Obsidian.exe"
+[ ! -f "$OBS" ] && OBS="/c/Users/${USERNAME:-$USER}/AppData/Local/Programs/obsidian/Obsidian.exe"
+```
+
+⚠️ **`$USER` is EMPTY in the Bash tool on Windows** — `$USERNAME` carries it. A bare `$USER`
+silently builds `/c/Users//AppData/...`, which fails the `[ -f ]` test and reads as "not
+installed" rather than as a broken path.
+
+**Active vault**: Set `{{vault_path}}` to your Obsidian vault location — resolve it at runtime
+(env override, then a candidate list) rather than hardcoding a username; the folder differs per
+machine.
 
 All CLI commands output to stderr — always append `2>&1` and filter startup noise:
 

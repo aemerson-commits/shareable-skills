@@ -131,6 +131,14 @@ For workers that changed:
 cd workers/<name> && npx wrangler deploy
 ```
 
+> **⚠️ Unlike the paired dev/prod project deploys above, this has NO dev/prod distinction — it IS production.**
+> Those projects come in dev/prod pairs and honor the `--prod` semantics documented in § Flags.
+> Workers typically do not: each is a **single deployment**, so a deploy from **any branch**
+> ships straight to live. Do not treat a worker deploy as the "dev half" of this skill's run —
+> review it first, and expect your release branch to be *behind* production until the merge
+> lands. Full rationale plus the shared-module resolution trap: `/worker-build` § "A Worker
+> Deploy IS a Production Release".
+
 IMPORTANT: After `wrangler deploy` for workers, verify cron triggers are actually registered via the CF API — wrangler output is not reliable. See `/worker-build` § "Cron Trigger Verification" for the full verification pattern. `wrangler secret put` can also silently unregister crons; always redeploy after setting secrets.
 
 IMPORTANT: After ANY secret change (Pages or Workers), immediately do a full redeploy. A secret update alone can create/activate a deployment that runs on a stale or incomplete code bundle — some endpoints silently 5xx while others keep working, and it's easy to misread as a code bug instead of a deploy-ordering issue.

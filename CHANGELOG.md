@@ -1,5 +1,24 @@
 # Changelog
 
+## 5.4.0 (2026-08-09)
+9 skill updates synced from internal source (changes since 2026-07-17), sanitized. +319 / −10 lines. No new skills (49 total).
+
+### Quality & Verification
+- `/pre-merge-review` — added Convention Audits (grep for the ABSENCE: presence sweep minus population sweep; if no lint owns it, the deliverable is a lint wired into CI, not a findings list); added Test-Validity Checks — a new rejection path needs accept-side tests or the overreach is invisible, a regression test must be shown to FAIL on unfixed code (synthetic per-listener events fake a bubbling keypress and pass against the bug), a runner can report green having run none of the relevant tests, blocking→async API swaps change global event delivery, and `\b` before a digit is a no-op guard
+- `/schema-check` — added Check Whether "Dev" and "Prod" Are Actually the Same Database (a `*-dev` database wired only as the preview binding never activates, so a migration is a production change with no rehearsal — split additive-now from destructive-later, probe preconditions, apply via the migration runner so the tracker is recorded); added Production Write Operations (one-off fix vs repeatable backfill, probe → write → re-SELECT verify, `--dry` before `--apply`)
+
+### Build Orchestration
+- `/worker-build` — added A Worker Deploy IS a Production Release (single deployment from any branch; "inert until deployed" is a wrong mental model; release branch sits behind live until the merge); added the shared-module resolution trap to bulk redeploy — a bare import added to a shared module resolves from *shared's* location and breaks every consuming worker's deploy while builds, lint and tests stay green (only a deploy or `--dry-run` can see it)
+- `/deploy-all` — flagged that worker deploys have no dev/prod distinction, unlike the paired project deploys in the same run
+
+### Session Management
+- `/start-day` — added Workspace Integrity (workspace dirs / dependency tree vanishing while the index stays clean; a file count cannot see a partial prune; a gutted package is not repaired by a plain install) and In-Flight Overlap Check (route new work to distinct topics; cross-check the user's stated goals against active branch topics); automated the provable half of the landed-state guard, with the caveats that it needs a citable token and that an unrun detector equals no detector; added prefer-one-aggregate-endpoint over N per-queue calls, route infra alerts into the same log, and an Open Bug Reports step (lead with SLA-overdue and critical/high; a commit reference is evidence, not proof)
+- `/session-notes` — added the inline fallback when the Agent tool is unavailable (the mandatory list is OUTPUTS, not subagents; log it as success, not partial); added Route by TYPE for friction ledgers (process frictions only — a ledger that absorbs every technical gotcha drowns its own signal) and fail-closed keyed ingest, with the corollary that you must write learnings in the parseable shape
+- `/insight`, `/triage-ideas`, `/session-notes`, `/start-day` — corrected the Obsidian binary auto-detect: `$USER` is EMPTY in the Bash tool on Windows, so a bare `$USER` builds `/c/Users//AppData/...` and reads as "not installed" rather than as a broken path
+
+### Reference & Conventions
+- `/throwaway-script` — added the bare-import trap (a scratchpad script never reaches the repo's `node_modules`, so a bare specifier dies with `ERR_MODULE_NOT_FOUND` — it looks like a missing dependency and isn't; fix by moving the script into the repo, never by installing into a shared tree) and reframed the location table around a session scratchpad default
+
 ## 5.3.0 (2026-07-17)
 18 skill updates synced from internal source (changes since 2026-06-23), sanitized. +206 / −11 lines. No new skills (49 total).
 

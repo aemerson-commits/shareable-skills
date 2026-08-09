@@ -134,6 +134,48 @@ Before adding `CREATE INDEX ... ON t(col)` to make `col LIKE ? || '%'` "seekable
 
 What reliably seeks: **equality** (`col IN (...)` / `col = ?`) on an indexed column, or a **literal-inlined** prefix (`LIKE 'abc%'`, with injection-safe construction). Practical rule: before adding a prefix-LIKE index "for performance," confirm with `EXPLAIN QUERY PLAN` that it actually produces a `SEARCH ... (col>? AND col<?)` — otherwise prefer an equality rewrite or accept the scan.
 
+## Check Whether "Dev" and "Prod" Are Actually the Same Database
+
+Before reasoning about any schema change as "we'll try it on dev first," confirm dev
+and prod are genuinely separate. A very common serverless setup has a `*-dev` database
+that **exists but is never used**: it is wired only as the *preview* binding, while every
+deploy targets the production branch — so the preview binding never activates and dev
+traffic hits the production database. The naming implies isolation that the bindings do
+not provide.
+
+> **⚠️ When they share one database, A MIGRATION IS A PRODUCTION CHANGE — there is no dev rehearsal.**
+> If CI applies migrations on pushes to *either* branch, **a breaking migration merged to
+> the integration branch hits production reads immediately.**
+>
+> For any rename / `DROP` / constraint-rebuild of a table production reads:
+> 1. **Split** additive-now from destructive-later into two migrations, so production
+>    survives the first apply and the destructive half lands once nothing reads the old shape.
+> 2. **Probe production preconditions first** — confirm the assumed tables/columns actually
+>    exist before writing the migration that depends on them.
+> 3. Apply through the **migration runner**, not a raw one-off execute — the runner records
+>    the applied-migrations tracker. A hand-applied migration is not recorded, so CI re-runs
+>    it and fails on `duplicate column name` (there is no `IF NOT EXISTS` for `ADD COLUMN`).
+> 4. **Verify both environments live** — a dev-only smoke proves nothing when it is the
+>    same database.
+
+Verify the binding rather than trusting the name: read the deploy config for which database
+ID each environment binds, and which branch the deploy actually targets.
+
+## Production Write Operations — One-Off Fix vs Repeatable Backfill
+
+Everything above is read-only. When you actually WRITE to a production table, pick the
+right vehicle and gate it:
+
+- **One-off data fix** (correct a handful of rows): a throwaway scratchpad script run
+  against the remote database. Always **probe → write → re-SELECT verify** in the same
+  session: confirm the reported changed-row count matches the intended count, then re-read
+  to prove the new state. **The re-SELECT is the proof** — the write's own count alone
+  doesn't show you what the rows now contain. Prefer deleting/updating by explicit primary
+  key over a pattern match; a scoped ID list cannot over-match the way a `WHERE` clause can.
+- **Repeatable backfill** (fill a column across many rows): a **committed** script with an
+  explicit `--dry` default (print what WOULD change, write nothing) and an `--apply` gate.
+  Run `--dry` first, eyeball the diff, then `--apply`. Syntax-check it before either run.
+
 ## Anti-Patterns
 
 - NEVER write a database query without checking the schema first

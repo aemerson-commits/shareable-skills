@@ -275,6 +275,56 @@ After executing fixes:
 2. Add new checklist items for recurring issues
 3. Update project docs (Known Gotchas) if applicable
 
+## Convention Audits — grep for the ABSENCE, not the presence
+
+A single grep answers "where is X used." A convention audit needs "where should X be and
+isn't" — that's a **diff of two sweeps**, not one:
+
+1. **Presence sweep** — every place the convention IS followed (e.g. every `RETURNING`).
+2. **Population sweep** — every place it COULD apply (e.g. every `INSERT INTO`). Every hit
+   in (2) absent from (1) is a candidate finding.
+3. **Check whether a lint already owns it** — grep your scripts/CI config for the topic.
+4. **If it does, run it** — a wired-in lint is machine-readable and already enforces the
+   rule; don't re-derive by eyeball what CI already checks.
+
+**If step 3 finds nothing and step 2 produced real findings, the deliverable is a lint
+script wired into CI — not a list in the review.** A finding list is read once; a lint
+holds the line forever. Several long-lived checks originated exactly this way.
+
+## Test-Validity Checks (a green suite is not evidence)
+
+Review the *tests* in the diff with the same suspicion as the code:
+
+- **A commit that adds a REJECTION path needs ACCEPT-side tests, or the overreach is
+  invisible.** Tests written alongside a new reject rule naturally assert "the bad input is
+  rejected" — which passes just as happily when the rule *also* rejects good input. For any
+  new reject/validate/filter rule, demand at least one test proving the *adjacent legitimate*
+  input still passes. (Real case: a narrowing fix shipped two overreaches because nothing
+  asserted that a valid neighbouring value still parsed.)
+- **A regression test must be shown to FAIL on the unfixed code**, and event-based tests are
+  the easy way to fool yourself. Writing the "bug reproduces" case with TWO synthetic events
+  (one per listener target) simulates two keypresses and passes against buggy code. ONE real
+  keypress is ONE event that bubbles through every ancestor. Dispatch a single event on the
+  deepest node and let it bubble.
+- **A test runner can report green having run NONE of the relevant tests.** A package-local
+  config `include` can exclude the very file you care about, and a package may have TWO
+  harnesses covering different files. Before trusting a result, confirm the test file you
+  care about is actually in the runner's include set — and confirm **a CI job actually
+  executes that runner**. A test nothing runs is documentation.
+- **Swapping a BLOCKING browser API for an async one changes global event delivery — sweep
+  every hand-rolled listener.** Blocking dialogs stop the event loop, so while one is open
+  the page receives no keyboard events. A promise-based replacement does not: every
+  document/window keydown listener that was previously unreachable-during-a-dialog becomes
+  live, and one Escape now hits both the new modal and whatever is underneath. If a shared
+  modal stack exists, confirm the hand-rolled modals actually register with it — one project
+  found its stack was called from the shared component and nowhere else, so ~40 modals never
+  entered it and a single Escape discarded a large unsaved form. The reasoning generalizes to
+  any blocking→async swap.
+- **A `\b` immediately before a digit is a no-op guard** — a digit is a word character, so
+  `/^(PL|FL)\b/` never matches `PL3`. Grep the diff for `\b` and ask what character actually
+  follows the boundary in real data; use a negative lookahead when the intent is "not
+  followed by more letters."
+
 ## Known Patterns to Check (Update Per Review)
 
 ### Security (Recurring)

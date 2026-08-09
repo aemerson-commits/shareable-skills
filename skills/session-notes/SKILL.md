@@ -13,8 +13,12 @@ user-invocable: true
 **Auto-detect**: Set `OBS` var based on which binary exists:
 ```bash
 OBS="/c/Program Files/Obsidian/Obsidian.exe"
-[ ! -f "$OBS" ] && OBS="/c/Users/$USER/AppData/Local/Programs/obsidian/Obsidian.exe"
+[ ! -f "$OBS" ] && OBS="/c/Users/${USERNAME:-$USER}/AppData/Local/Programs/obsidian/Obsidian.exe"
 ```
+
+⚠️ **`$USER` is EMPTY in the Bash tool on Windows** — `$USERNAME` carries it. A bare `$USER`
+silently builds `/c/Users//AppData/...`, which fails the `[ -f ]` test and reads as "the binary
+isn't installed" rather than as a broken path. Always `${USERNAME:-$USER}`.
 
 **Always use Obsidian CLI** for vault operations.
 
@@ -50,6 +54,13 @@ When closing out a session, dispatch these agent teams simultaneously after the 
 **MANDATORY agents**: Session Note Writer, Roadmap Updater, Memory Updater, and Help Content Updater MUST always be dispatched. Skill Tracker is optional if no skills were invoked.
 
 **Sequential prerequisite**: The End-of-Session Review (git commit, deploy, verify) MUST complete before dispatching teams. Notes must reflect final state, not in-progress state.
+
+**If the Agent tool is unavailable, run every step INLINE in the main loop — this is NOT a blocked close-out.** Some sessions run under a configuration that forbids subagents unless the user explicitly asks for them. When that is in force, dispatching is not an option and the close-out must still happen: work the numbered steps yourself, in order, in the main loop. **The mandatory list above is a list of OUTPUTS, not a list of subagents** — session note, roadmap, project status, memory, help content. What must not be skipped is the artifact; the dispatch mechanism is an implementation detail.
+
+Two practical notes when running inline:
+
+- It is usually **cheaper**, not a degradation — the main loop already holds the session context each agent would have to be re-fed. Keep the same token discipline the agent prompts impose: targeted greps and line-ranged reads, never a whole-file read of a 1000+ line document.
+- Log it as a **success** with a note that the harness blocked agents, **not** as "partial". Recording it as partial several sessions running is what made this look like a recurring skill failure when it was really a missing branch in this document.
 
 **Incremental-append preference (token economy)**: if the session already appended milestones to today's note as work landed (the cheap pattern — a one-line append per shipped item during the day), close-out is a TRIM-and-organize of that note, not a from-scratch reconstruction. Agents should be told what already exists in the note so they extend rather than regenerate. Each agent prompt must also scope its reads: targeted greps + line-ranged reads of Roadmap/MEMORY/help content, never whole-file reads of 1000+ line documents.
 
@@ -215,6 +226,38 @@ If a skill was relevant but NOT invoked (e.g., should have used `/research-gate`
    - Outdated skill → update the skill
 4. **Never repeat** a mistake that's already documented in memory
 5. **Route recurring friction, don't just note it.** A one-off self-critique in a prose session note is easy to write and easy to lose — nobody re-reads last month's notes looking for a pattern. If the same friction (a repeated mistake, a recurring workaround, a process gap) shows up more than once, capture it somewhere structured and append-only that you can query for "what keeps recurring and hasn't actually been fixed" — even a simple dated one-liner in a dedicated log is enough to turn a vague feeling ("this keeps happening") into a countable, promotable signal.
+
+**Route by TYPE — a friction ledger is for PROCESS frictions, not engineering gotchas.**
+This is the single thing that breaks such a ledger. One project's ledger blew past its
+cap of 15 to 38 active items, and 24 of those had been seen exactly once — because every
+technical lesson of the day was being written as a keyed entry and routed there. A
+friction belongs in the ledger only if it is a **repeatable failure in how you work**: a
+verification you skipped, a claim you made without checking, a tool you keep misusing.
+Ask: *could this recur on a totally unrelated feature next week?*
+
+| Lesson | Goes to |
+|--------|---------|
+| "a NUL byte makes grep report the file as binary" / "this query library refires per keystroke" / "SQLite compares ISO and space-formatted datetimes as strings" | your gotchas doc — **a fact about the system** |
+| "I claimed deployed without checking" / "I piped a verifier and lost its exit code" / "I resurfaced a memory as current without re-verifying" | the friction ledger — **a fact about your process** |
+
+A one-off technical bug fixed in the same session has already closed its loop; putting it
+in the ledger just drowns the recurring items the ledger exists to surface. When in doubt,
+write it as a gotcha — a real process friction will recur and get a second chance.
+
+6. **If ingestion is automated, make it FAIL-CLOSED on an explicit key.** A parser that
+   slugifies free prose will manufacture junk (one version invented ~19 keys from the first
+   six words of arbitrary bullets). Require a recognized heading AND a leading backticked
+   slug, and deliberately skip anything else:
+
+   ```markdown
+   ## Learnings
+
+   - `stale-cached-response-reads-as-failed-deploy` — preview served pre-deploy output, read as a failed deploy
+   ```
+
+   The corollary is a *writing* obligation: **write the learnings you want routed in that
+   shape as you write the note.** Otherwise ingest legitimately finds nothing and the
+   session's frictions evaporate — the exact failure the step exists to prevent.
 
 **Architecture decisions**: Prioritize critical thinking and scalable architecture over speed. Ask high-level questions to build a framework. When a function/feature has changed scope, point it out and ask if the architecture should change.
 

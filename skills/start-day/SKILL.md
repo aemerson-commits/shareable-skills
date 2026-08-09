@@ -13,8 +13,12 @@ Run this at the start of every session when the user says "good morning", "let's
 **Auto-detect**: Set `OBS` var based on which Obsidian binary exists:
 ```bash
 OBS="/c/Program Files/Obsidian/Obsidian.exe"
-[ ! -f "$OBS" ] && OBS="/c/Users/$USER/AppData/Local/Programs/obsidian/Obsidian.exe"
+[ ! -f "$OBS" ] && OBS="/c/Users/${USERNAME:-$USER}/AppData/Local/Programs/obsidian/Obsidian.exe"
 ```
+
+⚠️ **`$USER` is EMPTY in the Bash tool on Windows** — `$USERNAME` carries it. A bare `$USER`
+silently builds `/c/Users//AppData/...`, which fails the `[ -f ]` test and reads as "the binary
+isn't installed" rather than as a broken path. Always `${USERNAME:-$USER}`.
 
 All CLI commands: append `2>&1 | grep -v "Loading\|out of date"`
 
@@ -40,6 +44,59 @@ git stash drop
 ```
 
 If any OTHER path is conflicted, stop and resolve it normally — do NOT blanket-discard.
+
+### Step 1b — Workspace Integrity (repo-local, instant)
+
+In a monorepo, workspace source directories and/or the root `node_modules` can vanish
+from the working tree while the git index still lists them — so `git status` stays
+clean and the damage surfaces minutes later as a confusing "the dependency isn't
+installed" from whatever runs a build next. Concurrent sessions and worktree churn are
+the usual suspects. Catch it before anything builds:
+
+```bash
+# A check that (a) asserts each workspace dir exists on disk, and (b) probes a few
+# sentinel packages for a usable entry point — not just a directory count.
+node scripts/check-workspace-integrity.mjs
+```
+
+Two details make this worth scripting rather than eyeballing:
+
+- **A file count cannot see a partial prune.** A dependency tree can sit at hundreds of
+  entries — far above any count threshold — while specific packages are gutted and every
+  lint/test/build is broken. Probe for a resolvable entry point instead.
+- **A gutted package is not repaired by a plain install** — the installer sees the
+  directory and skips it. Remove that one package directory, then reinstall.
+
+Exit 0 = all present; exit 1 = something's gone, and it should print the one-line
+recovery (restore tracked source dirs from HEAD; reinstall for a wiped dependency tree).
+Fail soft — never let this block the briefing. Surface only if it flags something;
+otherwise a single "Workspace: intact" line.
+
+### Step 1c — In-Flight Overlap Check (repo-local, instant)
+
+Surface what every OTHER session is already working on, so the day's plan routes new work
+to DISTINCT topics. When sessions run in parallel, the one collision that isolation cannot
+prevent is two of them building the same feature — you get duplicate branches and duplicate
+PRs solving the same problem. Step 1's pull already fetched the remote, so skip a second one:
+
+```bash
+node scripts/in-flight.mjs --no-fetch
+```
+
+Read-only. Lists open PRs plus every session worktree with its topic (parsed from the
+conventional-commit scope), whether it carries uncommitted work, how far ahead of the
+integration branch it is, and an `OVERLAP` flag for any topic with more than one active
+branch. Fail soft — a git/CLI error just skips it.
+
+Surface in the briefing:
+
+- If it reports overlaps, lead with the flagged topic list ("4 sessions on `<topic>` —
+  check before starting another there").
+- If none, a single "In flight: N sessions, all distinct topics" line.
+- **When the user states today's goals, cross-check each against the active-branch topics**
+  and flag any that already have a live branch ("`<topic>` already has 4 active branches —
+  route there rather than start fresh?"). This is the visibility half of the concurrency
+  fix; isolation and commit guards are the enforcement half.
 
 ### Step 2 — Re-index (background, parallel)
 
@@ -71,6 +128,14 @@ Read and summarize:
 If `promises.md` or `working-state.md` don't exist, that's fine — report clean state.
 
 **Landed-state guard.** Memory is a point-in-time snapshot — a note that says "dev-only" or "pending" can be stale if a later session (or a concurrent one) already shipped it. Before presenting a memory item as still-pending, spot-check anything that cites a PR number or commit SHA against live git/CI (`git log`, `gh pr view`, or your deploy tool) rather than repeating the note's claim verbatim. Flag mismatches ("marked dev-only, actually already on prod") rather than silently trusting or silently correcting — the user decides how to reconcile it.
+
+**Automate the provable half.** A scanner can mechanize this over your notes and flag only claims it can PROVE are stale — the note says pre-production while the cited SHA is already on the release branch. Because it never guesses, it's safe to run unconditionally:
+
+```bash
+node scripts/lint-memory-landed-claims.mjs        # --json for machine output
+```
+
+Two lessons from building one: it needs a **citable token** (a SHA or PR number) on the line to check anything, so items written as vague prose stay invisible to it and still need the manual pass above — and writing a **detector alone doesn't fix the problem**, because nothing runs it. Wiring it into this checklist is what closes the adoption gap; an unrun detector is indistinguishable from no detector.
 
 ### Step 5 — Check Ideas Inbox
 
@@ -123,6 +188,37 @@ npx wrangler d1 execute your-db --remote --command \
 - **Window guard**: with a large limit the response can pull a long backlog. Detail-list only the recent window (last ~14 days) in the briefing; roll everything older into "+N older unresolved (>14d)" so a backlog of stale rows can't crowd out today's real issues.
 - Don't auto-resolve — user reviews and marks Resolve / Acknowledge / Dismiss themselves
 
+**Prefer ONE aggregate endpoint over N per-queue queries.** Once the briefing pulls from
+several queues — event log, open bugs, feature requests, an approval queue — each as its own
+authenticated round-trip, collapse them into a single summary endpoint returning
+`{ events: {...}, bugs: {...}, features: {...}, approvals: {...} }`. It is *summary-grade*
+by design (top ~10 per queue); deep triage still happens in the canonical views. Keep the
+per-queue query documented as the fallback for when you need older rows than the aggregate
+returns, or when the aggregate is unreachable.
+
+**Route infra alerts into the same log.** If health-check and cron-watchdog alerts email but
+never land in the event log, they are invisible to this step and get triaged only by whoever
+reads mail. Mirroring them into the log at send time makes an infra incident a real,
+resolvable row you triage like any application error.
+
+### Step 8c — Open Bug Reports (the list itself, not just its drift)
+
+Status-reconciliation checks tell you which tickets have drifted from git; this step surfaces
+the open bugs THEMSELVES. Run a read-only query for tickets of kind `bug`, pre-sorted
+new → in-progress → triaged, severity desc, newest first. Surface:
+
+- If none: "Bugs: none open"
+- Else: "Bugs: N open (X new · Y in progress · Z triaged)" + the top ~5 as one-liners:
+  `<id> · <severity> · <status> · <title> (<reporter>, <age>d)` — append `fix on <release branch>`
+  when a linked commit says so.
+- **Lead with** any `new` bug past the triage SLA and anything critical/high — those demand a
+  same-day decision.
+- **Close-out prompt**: a bug whose fix is already on the release branch is a candidate to
+  close — offer it rather than closing silently. **A commit *reference* is evidence, not
+  proof**: skip the offer when the referencing commit was clearly partial or parked.
+- A `triaged` bug idle 14+ days is backlog rot — roll those into one "+N aging triaged" line.
+- Don't triage here; the user does that in the canonical queue view.
+
 ### Step 8.5 — Pipeline & Plan of Attack (if project tracking is set up)
 
 If the project uses a gated project pipeline (e.g. Obsidian project notes with gate state), read the open notes and build three buckets:
@@ -162,12 +258,15 @@ Present a concise morning briefing:
 Good morning! Here's your daily briefing:
 
 **Git pull**: X files, summary of changes
+**Workspace**: intact / N missing (surface only if flagged — with the one-line recovery)
+**In flight**: N sessions, all distinct topics / OVERLAP on `<topic>` (N branches)
 **Last session (date)**: What was done, where we left off
 **Crash buffer**: Clean / has active state (details)
 **Active alerts**:
 - alert 1
 - alert 2
 **Event Log**: clear / N new errors+duplicates needing review (top 3-5 listed if >0)
+**Bugs**: none open / N open (X new · Y in progress · Z triaged) — top ~5, leading with SLA-overdue new + critical/high
 **Pipeline — blocked on you**: N — the questions/decisions only you can clear (top 3-5; "all clear" if none)
 **Pipeline — agent-ready today**: N — the pre-scoped unattended queue (top 3-5 by priority), ready for overnight agent or /advance-gate
 **Night shift (if ran)**: state, draft PRs to review, queued questions
