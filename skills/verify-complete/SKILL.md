@@ -1,7 +1,6 @@
 ---
 name: verify-complete
 description: "Evidence-based completion check before claims persist to persistent state, session notes, or roadmap. Use BEFORE writes that say items are done, BEFORE answering 'how much is done?', or before any multi-item completion claim."
-user-invocable: true
 ---
 
 # Verify Complete — Evidence-Based Completion Check

@@ -1,7 +1,6 @@
 ---
 name: html-slides
 description: "HTML Slides — Create polished, interactive HTML presentation slides from a single prompt. Output is a self-contained HTML file. Triggers: 'create a presentation', 'make slides', 'build a deck'."
-user-invocable: true
 ---
 
 # HTML Slides

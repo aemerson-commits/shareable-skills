@@ -1,7 +1,6 @@
 ---
 name: deploy-all
 description: "Parallel deploy all changed projects — detects changes, builds, deploys, watches CI, verifies live URLs. Use instead of manual per-project deploys. Triggers: 'deploy all', 'deploy everything', 'push and deploy'."
-user-invocable: true
 ---
 
 # Deploy All — Parallel Multi-Project Deploy

@@ -1,7 +1,6 @@
 ---
 name: full-stack-build
 description: "Orchestrate agent teams to build features spanning frontend + backend — API design, D1 migrations, React components, integration wiring, and verification. Use for new views with endpoints."
-user-invocable: true
 ---
 
 # Full-Stack Build

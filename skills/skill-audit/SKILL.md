@@ -1,12 +1,11 @@
 ---
 name: skill-audit
 description: "Run a comprehensive health audit across all skills — checks staleness, safety guards, cross-skill consistency, context efficiency, step compliance, and learning pipeline. Use when you want to verify skill quality, after bulk skill edits, or as a periodic maintenance check."
-user-invokable: true
 ---
 
 # Skill Audit — Comprehensive Health Check
 
-Run 6 automated checks across all project skills and produce a health report card.
+Run 7 automated checks across all project skills and produce a health report card.
 
 ## When to Run
 
@@ -16,7 +15,7 @@ Run 6 automated checks across all project skills and produce a health report car
 
 ## Checks
 
-Run checks 1-4 in parallel via subagents. Check 5 requires the current session's transcript. Check 6 requires the `/evolve` pipeline.
+Check 0 is a deterministic parse — run it inline first, no agent. Run checks 1-4 in parallel via subagents. Check 5 requires the current session's transcript. Check 6 requires the `/evolve` pipeline.
 
 > **Evidence rule (applies to every check).** A finding is only valid if the agent
 > can quote the EXACT source line that proves it — `file:line` + verbatim text.
@@ -30,6 +29,39 @@ Run checks 1-4 in parallel via subagents. Check 5 requires the current session's
 > trade for a verification task.
 
 > Pin `model: "sonnet"` on every dispatched agent — it keeps a multi-agent audit cost-predictable and consistent regardless of what model is driving the parent session, and satisfies any project policy that requires subagent dispatches to name an explicit model.
+
+### Check 0: Frontmatter Validity
+
+Cheap, deterministic, and no agent needed — run it first. Parse every `SKILL.md`'s YAML
+frontmatter and assert three things: the keys are all in the harness's documented set, `name`
+matches the directory, and the invocation mode is the one the skill's body implies.
+
+**An unrecognised key is not a harmless comment.** Depending on the distribution path it is
+either rejected outright or silently ignored — and silent-ignore is the dangerous outcome,
+because the file *reads* as if it configured something. Get the allowed set from your harness's
+current documentation rather than from the surrounding files: a wrong key propagates by
+copy-paste, so the neighbours are the worst possible reference.
+
+The specific trap worth naming, because it survives every other check in this audit:
+
+> **A field whose value equals the default is a no-op that reads as a restriction.** In Claude
+> Code, `user-invocable: true` is exactly this — `true` is already the default, so the line
+> restricts nothing. It looks like "only the human may invoke this," but the field that actually
+> hides a skill's description from the model is `disable-model-invocation: true`.
+> `user-invocable: false` is a *third* thing again: only the model may invoke it, and the
+> description stays in context.
+>
+> Found live in two independent skill sets — 22 of 99 skills in one, 28 of 49 in the other —
+> every one of them still fully model-invocable with its description permanently loaded, which is
+> the precise cost the author wrote the line to avoid.
+
+**Report, don't mass-fix.** Stripping a no-op is safe, but *converting* it to the field the
+author probably meant is not: a skill that other skills invoke, or that the model must reach on
+its own, breaks silently when its description leaves context. Flag each one with the body
+evidence for which mode it wants, and let a human decide per skill.
+
+Also worth asserting here: a skill with side effects — deploy, send, merge, production write —
+should be user-invoked regardless of context-load arithmetic.
 
 ### Check 1: Staleness Detection
 
@@ -154,6 +186,7 @@ If `/evolve` is not installed, skip this check silently.
 ### Summary
 | Check | Status | Issues |
 |-------|--------|--------|
+| Frontmatter | PASS/FAIL | {count} invalid or no-op keys |
 | Staleness | PASS/FAIL | {count} stale refs |
 | Safety Guards | PASS/FAIL | {count} missing guards |
 | Consistency | PASS/FAIL | {count} contradictions |

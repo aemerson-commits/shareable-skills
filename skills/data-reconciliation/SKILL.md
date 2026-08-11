@@ -1,7 +1,6 @@
 ---
 name: data-reconciliation
 description: "Trace a data item through your pipeline layers to find where values diverge. For debugging stale/wrong data, not code bugs."
-user-invocable: true
 ---
 
 # Data Reconciliation — Pipeline Integrity Check

@@ -1,7 +1,6 @@
 ---
 name: worktree-guard
 description: "Safe worktree merge — diffs each changed file against dev HEAD before copying, flags conflicts. Use BEFORE copying worktree files to the main tree. Triggers: 'merge worktree', 'copy from worktree', after any worktree agent completes with changes."
-user-invocable: true
 ---
 
 # Worktree Guard — Safe Merge

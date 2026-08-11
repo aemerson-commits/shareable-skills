@@ -1,7 +1,6 @@
 ---
 name: session-notes
 description: "End-of-session Obsidian notes (MANDATORY at close). Triggers: 'close out', 'wrap up', 'done for the day'. NOT for reading past notes."
-user-invocable: true
 ---
 
 # Session Notes — Obsidian Vault Update

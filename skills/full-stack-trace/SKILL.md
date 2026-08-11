@@ -1,7 +1,6 @@
 ---
 name: full-stack-trace
 description: "Team B diagnostic — systematic layer-by-layer trace when the fix was in the wrong layer. Frontend -> API -> Backend -> Infrastructure."
-user-invocable: true
 ---
 
 # Full Stack Trace (Team B)

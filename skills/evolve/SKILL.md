@@ -1,7 +1,6 @@
 ---
 name: evolve
 description: Evolve — Continuous Learning Pipeline. Manages automatic behavioral pattern extraction from Claude Code sessions. Use to install hooks, run analysis, and graduate instincts.
-user-invocable: true
 ---
 
 # Evolve — Continuous Learning Pipeline

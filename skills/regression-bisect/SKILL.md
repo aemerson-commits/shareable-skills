@@ -1,7 +1,6 @@
 ---
 name: regression-bisect
 description: "Team E diagnostic — regression hunting for features that stopped working. Git bisect, side effect analysis, rollback verification."
-user-invocable: true
 ---
 
 # Regression Bisect (Team E)

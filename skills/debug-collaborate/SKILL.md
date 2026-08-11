@@ -1,7 +1,6 @@
 ---
 name: debug-collaborate
 description: "Multi-agent collaborative debugging — parallel hypothesis generation and testing. Use when a solution didn't work, a bug persists, or the user reports 'still happening' / 'not fixed' / 'didn't work'."
-user-invocable: true
 ---
 
 # Collaborative Debugging - Multi-Agent Hypothesis Process

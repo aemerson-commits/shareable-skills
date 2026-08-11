@@ -1,12 +1,13 @@
 ---
 name: grill-me
-description: "Interrogate the user about their idea before any work begins. Walks the decision tree one question at a time, provides recommended answers, self-serves from codebase. Produces an Intent Summary for /research-gate."
-user-invocable: true
+description: "Interrogate the user about their idea before any work begins. Works the design tree in rounds - asks the whole unblocked frontier at once with a recommended answer each, self-serves facts from the codebase. Produces an Intent Summary for /research-gate."
 ---
 
 # Grill Me — Intent Interrogation
 
-Deeply question the user about their idea before any code or research begins. Walks down each branch of the decision tree, resolving dependencies one by one. Prevents building the wrong thing.
+Interview the user relentlessly until you reach a shared understanding of what they want built. Prevents building the wrong thing.
+
+Map the idea as a **design tree**: every decision branches into the decisions that hang off it.
 
 ## When to Use
 
@@ -24,15 +25,45 @@ Deeply question the user about their idea before any code or research begins. Wa
 - Single-file changes or config updates
 - User says "just do it" or "I know what I want"
 
-## How It Works
+## Rounds and the Frontier
 
-**One question at a time.** Do not dump a questionnaire. Each question:
-1. Ask one specific question
-2. Provide your recommended answer based on what you know (codebase, session history, memory)
-3. Wait for the user's response
-4. Follow up on their answer before moving to the next branch
+Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled — the questions you can ask *now* without guessing at answers you haven't heard yet.
 
-**Self-service when possible.** If a question can be answered by reading the codebase, session notes, or memory files — answer it yourself instead of asking the user. Tell them what you found and ask if it's correct.
+**Ask the whole frontier in one round.** Then wait for the user's answers before the next round.
+
+Each answer reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in *this* round belongs to a *later* round.
+
+Round one is often a single critical question — the one that opens everything else. That is correct, not a failure to batch.
+
+The session is done when the frontier is empty: every branch visited, nothing silently assumed.
+
+**Why rounds, not one-at-a-time:** the tail of a grilling session is mostly easy questions. One-per-turn turns that tail into "yes, yes, yes" across ten round-trips — the user's attention is spent on ceremony instead of on the decisions that matter. Batching the frontier lets them blast through the easy ones (dictation works well here) and spend their thinking on the hard ones.
+
+### Question format
+
+Default to numbered markdown so the user can answer against the numbers:
+
+```
+### Round 1
+
+❓ **Q1 — <question title>**: <question body, multiple paragraphs and options allowed>
+
+➡️ <your recommended answer, and why>
+
+❓ **Q2 — <question title>**: ...
+
+➡️ ...
+```
+
+If your harness offers a structured multiple-choice prompt, use it **only when the whole round is closed-choice** — every question has a small set of discrete options. Open-ended questions ("paint the picture", "what breaks today") lose their value squeezed into fixed options, so those rounds stay markdown.
+
+### Facts are your job, decisions are theirs
+
+Finding *facts* is never the user's job. When a frontier question needs a fact from the environment — a schema, an existing endpoint, who holds a permission, what a column actually contains — go get it. Grep, query, read the notes. Then tell the user what you found and ask only whether it's right.
+
+Don't block on it. A running lookup is an unsettled prerequisite: only the questions downstream of it wait. Ask the rest of the frontier now. If the harness supports it, dispatch a sub-agent for the lookup and keep interviewing.
+
+The **decisions** are the user's. Put each to them and wait.
 
 ## Project Glossary
 
@@ -47,9 +78,9 @@ During the session:
 
 This glossary pass is optional for non-codebase use (writing, planning, personal decisions), but mandatory for any feature touching a repo that maintains one.
 
-## Question Branches
+## The Design Tree
 
-Walk these branches in order, but skip any that are obviously answered by context:
+These are the branches, not a walk order. Each round, ask whichever are on the frontier; skip any the context already answers:
 
 ### 1. Audience & Access
 - Who uses this? Which user roles? Which project/app?
@@ -90,9 +121,11 @@ Walk these branches in order, but skip any that are obviously answered by contex
 - Is this the full vision or an MVP? What gets cut for v1?
 - What does v2 look like? (helps design for extensibility without over-engineering)
 
+Branches 1-4 are the load-bearing ones. Branches 5-7 can be resolved by `/research-gate` or during implementation if the user is out of patience.
+
 ## Termination
 
-Stop grilling when you have clear answers for branches 1-4 at minimum. Branches 5-7 can be answered by research-gate or during implementation.
+Stop when the frontier is empty, or when branches 1-4 are settled and the user wants to move.
 
 Produce an **Intent Summary**:
 
@@ -109,7 +142,7 @@ Produce an **Intent Summary**:
 **Risks**: [key edge cases or unknowns]
 ```
 
-This summary becomes the input to `/research-gate` Phase 1. Paste it directly into the research-gate feature description.
+Do not act on it until the user confirms you have reached a shared understanding. The summary is the input to `/research-gate` Phase 1 — paste it directly into the feature description.
 
 Before producing the summary, confirm any glossary additions or edits the session produced are written — the Intent Summary should use the glossary's terms verbatim.
 
@@ -122,9 +155,15 @@ Before producing the summary, confirm any glossary additions or edits the sessio
 | `/full-stack-build` | **Upstream** — can invoke grill-me in Phase 0 if intent is unclear |
 | `/persistent-issue` | **Not related** — grill-me is for new features, not debugging |
 
+When a branch of the tree can only be answered by someone who isn't the user — a stakeholder, a domain expert, a customer — export that branch into a document for them rather than guessing or stalling the whole session on it.
+
 ## Pipeline Position
 
 ```
 /grill-me  →  /research-gate  →  /write-plan  →  /full-stack-build
   INTENT        CONSTRAINTS       DECOMPOSITION     EXECUTION
 ```
+
+---
+
+*The rounds/frontier model is adapted from the `grilling` skill in [mattpocock/skills](https://github.com/mattpocock/skills) (MIT).*

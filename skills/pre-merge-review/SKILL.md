@@ -1,7 +1,6 @@
 ---
 name: pre-merge-review
 description: "Comprehensive pre-merge review — security pentesting, performance, scalability, UX consistency, and code hardening. Run before merging dev to main to catch issues before production. Triggers: 'pre-merge review', 'review before merge', 'full code review for merge'. Soft-default: when planning a commit or merge that touches 3+ top-level projects, suggest running this skill before pushing — the cross-project blast radius warrants a review even if no individual change looks risky."
-user-invocable: true
 ---
 
 # Pre-Merge Review

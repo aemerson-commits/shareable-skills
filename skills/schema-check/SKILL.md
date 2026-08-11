@@ -1,7 +1,6 @@
 ---
 name: schema-check
 description: "Verify database schema, KV keys, and env bindings before writing queries or endpoints. Use BEFORE any SQL, KV operations, or config changes. Triggers: 'check schema', 'what columns does X have', or proactively when writing DB/KV code."
-user-invocable: true
 ---
 
 # Schema Check — Pre-Query Verification

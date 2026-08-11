@@ -1,7 +1,6 @@
 ---
 name: propagate-feature
 description: "Replicate features across projects with independent codebases — diff, adapt, apply. For cross-project propagation when projects have component copies instead of shared imports."
-user-invocable: true
 ---
 
 # Propagate Feature — Cross-Project Replication

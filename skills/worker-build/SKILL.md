@@ -1,7 +1,6 @@
 ---
 name: worker-build
 description: "Factory for building Cloudflare Workers — email reporters, cron jobs, API monitors. Parallel agents: scaffold, admin UI, secrets config, deploy + verify."
-user-invocable: true
 ---
 
 # Worker Build — Cloudflare Worker Factory

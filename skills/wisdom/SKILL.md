@@ -1,7 +1,6 @@
 ---
 name: wisdom
 description: "Weekly knowledge review — runs skill-audit, then analyzes instincts vs CLAUDE.md vs skills. Proposes new skills, skill enhancements, CLAUDE.md cleanup, and marks covered instincts. Triggered from /start-day on Fridays."
-user-invocable: true
 ---
 
 # Wisdom — Weekly Knowledge Review

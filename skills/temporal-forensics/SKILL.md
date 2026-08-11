@@ -1,7 +1,6 @@
 ---
 name: temporal-forensics
 description: "Team D diagnostic — temporal analysis for intermittent issues. Hunts race conditions, stale state, cache timing, and async ordering."
-user-invocable: true
 ---
 
 # Temporal Forensics (Team D)

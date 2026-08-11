@@ -1,7 +1,6 @@
 ---
 name: env-audit
 description: "Audit environment variables across all projects — detect missing secrets, compare code references against deployed config, and identify which env vars each context requires."
-user-invocable: true
 ---
 
 # Environment Variable Audit

@@ -1,5 +1,19 @@
 # Changelog
 
+## 5.5.0 (2026-08-11)
+3 skill updates synced from internal source (changes since 2026-08-09), plus a frontmatter correction applied across 28 skills, sanitized. +111 / −44 lines. No new skills (49 total).
+
+### Intent & Design
+- `/grill-me` — replaced "one question at a time" with the **design tree / frontier / rounds** model. The frontier is every decision whose prerequisites are already settled; ask that whole set in one round, numbered, each with a recommended answer, then recompute after the user answers. A question that depends on another still open in this round belongs to a later round. Rationale added: the tail of a grilling session is mostly easy questions, and one-per-turn spends the user's attention on ceremony instead of decisions. Also split **facts from decisions** — facts are never the user's job, a running lookup blocks only its own downstream questions, and the rest of the frontier is asked immediately. Question-format block added, with the caveat that a structured multiple-choice prompt fits only an all-closed-choice round; open-ended questions lose their value squeezed into fixed options. Credits the upstream `grilling` skill (MIT). Reframed "Question Branches" as the design tree rather than a walk order
+
+### Skill Authoring
+- `/skill-audit` — new **Check 0: Frontmatter Validity**, a deterministic inline parse run before the agent checks. Asserts documented keys, `name` matching the directory, and an invocation mode consistent with the body. Names the trap that survives every other check in the audit: **a field whose value equals the default is a no-op that reads as a restriction** — `user-invocable: true` restricts nothing, while `disable-model-invocation: true` is the field that hides a description from the model, and `user-invocable: false` is a third behaviour again. Guidance is report-don't-mass-fix, because *converting* a no-op to the field the author probably meant silently breaks any skill another skill invokes. Adds the "get the allowed key set from the harness docs, not from neighbouring files" rule, since a wrong key propagates by copy-paste
+- **28 skills** — stripped the no-op `user-invocable: true` line (and one typo'd `user-invokable`) from their frontmatter. Zero behaviour change; the line restated the default. Removing it stops the plugin shipping 28 worked examples of a misleading pattern. The two skills using `user-invocable: false` — a real field with real effect — are untouched
+
+### Session Management
+- `/start-day` — bug close-out now checks whether the close **actually notifies the reporter**: notification is frequently opt-in, a tracker that once emailed on close may have been switched to silent, and the notify flag usually has to ride the same request that closes the record because many APIs reject a notify against an already-terminal ticket. Decide notify-vs-silent before running the close
+- `/start-day` — **reconcile the overnight morning checklist, don't recite it.** Nothing auto-clears those boxes, and a dashboard rendering a status note verbatim shows a finished task as outstanding forever. Two failure modes to design against: nobody owns the note (fix by making ownership **state-scoped** — the worker owns it while running, the reviewer owns it once terminal), and prose is not a checkbox (a generator filtering on `[ ]` vs `[x]` is not cleared by writing "DONE" in the body)
+
 ## 5.4.0 (2026-08-09)
 9 skill updates synced from internal source (changes since 2026-07-17), sanitized. +319 / −10 lines. No new skills (49 total).
 

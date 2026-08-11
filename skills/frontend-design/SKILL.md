@@ -1,7 +1,6 @@
 ---
 name: frontend-design
 description: "Design system guide — CSS tokens, Tailwind v4, shadcn/ui components, theming, and UI conventions for consistent dark-themed dashboard interfaces."
-user-invocable: true
 ---
 
 # Frontend Design Guide

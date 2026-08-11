@@ -1,7 +1,6 @@
 ---
 name: isolation-test
 description: "Team C diagnostic — isolation testing when multiple factors contribute to a persistent issue. Tests components independently to find interacting failures."
-user-invocable: true
 ---
 
 # Isolation Testing (Team C)

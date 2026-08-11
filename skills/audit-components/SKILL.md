@@ -1,7 +1,6 @@
 ---
 name: audit-components
 description: "Audit component health after code changes — verify imports, props, and shared utility consistency across all projects."
-user-invocable: true
 ---
 
 # Audit Components

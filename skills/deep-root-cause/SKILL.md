@@ -1,7 +1,6 @@
 ---
 name: deep-root-cause
 description: "Team A diagnostic — deep root cause analysis when the obvious fix was wrong. Traces data flow, audits assumptions, builds reproduction."
-user-invocable: true
 ---
 
 # Deep Root Cause Analysis (Team A)

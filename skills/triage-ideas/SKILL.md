@@ -1,7 +1,6 @@
 ---
 name: triage-ideas
 description: "Process Obsidian Ideas.md inbox — route ideas to project roadmaps. NOT for direct roadmap edits or reviews."
-user-invocable: true
 ---
 
 # Triage Ideas — Obsidian Inbox to Project Roadmaps

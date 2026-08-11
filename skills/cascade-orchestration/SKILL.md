@@ -1,7 +1,6 @@
 ---
 name: cascade-orchestration
 description: "Reusable agent team cascade patterns — parallel dispatch, sequential pipelines, fan-out/fan-in, and cross-project propagation"
-user-invocable: true
 ---
 
 # Cascade Orchestration Patterns

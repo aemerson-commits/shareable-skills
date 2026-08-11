@@ -1,7 +1,6 @@
 ---
 name: persistent-issue
 description: "Escalating diagnostic router for persistent issues. Classifies, dispatches Team A-E, auto-escalates in cascade mode. Triggers: 'not fixed', 'still broken', 'same error'."
-user-invocable: true
 ---
 
 # Persistent Issue — Diagnostic Escalation Router

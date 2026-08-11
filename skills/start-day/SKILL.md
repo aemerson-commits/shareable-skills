@@ -1,7 +1,6 @@
 ---
 name: start-day
 description: "Morning startup: git pull, QMD update, session notes review, alerts check, ideas triage, and daily briefing"
-user-invocable: true
 ---
 
 # Start Day — Morning Session Startup
@@ -216,6 +215,12 @@ new → in-progress → triaged, severity desc, newest first. Surface:
 - **Close-out prompt**: a bug whose fix is already on the release branch is a candidate to
   close — offer it rather than closing silently. **A commit *reference* is evidence, not
   proof**: skip the offer when the referencing commit was clearly partial or parked.
+- **Check whether your close actually notifies the reporter — don't assume it does.**
+  Notification is frequently *opt-in*, and a tracker that once emailed on close may have been
+  changed to silent after a bad auto-notice went out. Read the close path before you promise
+  anyone was told. Worse, the notify flag usually has to ride the **same** request that closes
+  the ticket: many APIs reject a notify against an already-terminal record, so a silent close
+  can only be undone by reopening. Decide notify-vs-silent *before* running the close.
 - A `triaged` bug idle 14+ days is backlog rot — roll those into one "+N aging triaged" line.
 - Don't triage here; the user does that in the canonical queue view.
 
@@ -228,6 +233,22 @@ If the project uses a gated project pipeline (e.g. Obsidian project notes with g
 3. **Needs scoping** — open projects not yet ready for unattended work, stuck early (no plan written). Candidates for a self-refill research pass if the agent-ready queue is thin.
 
 If an overnight agent run finished, surface what it produced — draft PRs to review, queued questions, the morning checklist — and fold its queued questions into bucket 1.
+
+**RECONCILE that morning checklist, don't recite it.** Nothing auto-clears those boxes. A
+dashboard that renders a status note verbatim — no cross-check against git, the PR list, or the
+database — will show a completed task as outstanding forever, and reciting the note into the
+briefing launders a stale claim into a fresh-looking one. Verify each box against ground truth
+in the same pass and tick what has landed.
+
+Two failure modes to design against:
+
+- **Nobody owns the note.** An unattended worker writes it, then terminates; the reviewer treats
+  "the worker owns this file" as permanent and writes nothing back. Make ownership
+  **state-scoped**: the worker owns the note *while running*; once the run is terminal, whoever
+  reviews it owns the checkboxes. Without that split, every skill that touches the file reads
+  itself as the wrong owner and the boxes stay open.
+- **Prose is not a checkbox.** If a downstream generator filters on `[ ]` versus `[x]`, writing
+  "DONE" in the body clears nothing. Tick the **source** box, in the file the generator reads.
 
 Keep it to the top few per bucket; the full board lives in whatever project-tracking view you use.
 
