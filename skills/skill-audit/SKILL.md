@@ -55,6 +55,13 @@ The specific trap worth naming, because it survives every other check in this au
 > every one of them still fully model-invocable with its description permanently loaded, which is
 > the precise cost the author wrote the line to avoid.
 
+**Match the key loosely or your own check will miss the variants.** A no-op key gets retyped from
+memory, so it arrives in several spellings: `user-invocable`, `user_invocable`, `user-invokable`.
+All three were found in the wild. A validator anchored on `^[a-z-]+:` silently skips the
+underscore form — the check reports clean while the file is still wrong. Extract with
+`^[A-Za-z_-]+:` and compare against the allowed set, rather than pattern-matching the specific
+key you expect.
+
 **Report, don't mass-fix.** Stripping a no-op is safe, but *converting* it to the field the
 author probably meant is not: a skill that other skills invoke, or that the model must reach on
 its own, breaks silently when its description leaves context. Flag each one with the body

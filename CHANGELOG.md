@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.5.1 (2026-08-11)
+Patch: the v5.5.0 frontmatter sweep missed a variant, and the check that cleared it was the reason.
+
+- `/insight` — removed `user_invocable: true`, a **third spelling** of the no-op key (underscore, alongside the hyphenated `user-invocable` and a typo'd `user-invokable`). It is not a recognised field in any spelling
+- `/skill-audit` — Check 0 now says to extract frontmatter keys with `^[A-Za-z_-]+:` and compare against the allowed set, rather than pattern-matching the expected key. A validator anchored on `^[a-z-]+:` skips the underscore form silently, so the check reports clean while the file is still wrong — which is exactly what happened between 5.5.0 and this patch
+
 ## 5.5.0 (2026-08-11)
 3 skill updates synced from internal source (changes since 2026-08-09), plus a frontmatter correction applied across 28 skills, sanitized. +111 / −44 lines. No new skills (49 total).
 

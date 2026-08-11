@@ -1,7 +1,6 @@
 ---
 name: insight
 description: "Weekly: generate Obsidian insight report with metrics and priorities"
-user_invocable: true
 ---
 
 # Weekly Insight Report — Obsidian Vault
