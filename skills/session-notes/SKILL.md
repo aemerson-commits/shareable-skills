@@ -1,11 +1,9 @@
 ---
 name: session-notes
-description: "End-of-session Obsidian notes (MANDATORY at close). Triggers: 'close out', 'wrap up', 'done for the day'. NOT for reading past notes."
+description: "End-of-session notes. Two modes — cheap `checkpoint` for mid-day, full close-out at true end of day. Triggers: 'close out', 'wrap up', 'done for the day', 'checkpoint'. NOT for reading past notes."
 ---
 
 # Session Notes — Obsidian Vault Update
-
-**MANDATORY** at the end of every session when the user says they're done.
 
 ## Obsidian CLI
 
@@ -33,186 +31,155 @@ All CLI commands output to stderr — always append `2>&1` and filter startup no
 | `{{project}}/Learnings/` | Debugging patterns, API gotchas, architecture decisions |
 | `{{project}}/Roadmap.md` | Backlog and completed items |
 
-## Steps
+## Pick the mode first — this is the whole cost story
 
-This skill IS the Feature-Ship Checklist. Steps 3 (Roadmap), 5 (Help Content), and 6 (Memory) are the same items the checklist mandates land in the same session as the feature commit. Step 1 (Session Note) is the fourth. If a feature shipped today, all four must complete before the session closes — skipping any creates the silent-drift pattern the checklist exists to prevent.
+If this skill runs several times a day, most of those runs are mid-day checkpoints paying for
+a full close-out they don't need — every Roadmap edit, every project note, the gotcha routing,
+the help-content pass. That's the cost, and it's nearly all waste unless the day is actually
+ending.
+
+| | **Checkpoint** | **Full close-out** |
+|---|---|---|
+| When | Default. Any request that isn't an explicit ask for a full close-out. | Only when the user says so in words. |
+| Does | Appends to today's note. Nothing else. | Everything below. |
+| Costs | One append. | The full checklist. |
+| Say | "Checkpointed — full close-out on request." | Full report. |
+
+**Checkpoint is the default, and the only mode you may pick on your own.** Run the full
+close-out only when the user explicitly asks for one — "full close-out", "close out the day",
+"run the whole checklist." Nothing else licenses it:
+
+- A bare "session notes" / "wrap up" / "checkpoint" → **checkpoint**.
+- A second or third "session notes" the same day → still **checkpoint**. Repetition is not
+  escalation.
+- The clock, the hour, or a sense the day looks over → **not a signal**. You cannot see when
+  the user is actually done.
+- **A feature shipping today does not upgrade the mode.** It means the day still owes one full
+  close-out *when the user calls for it* — see § Relationship to the Feature-Ship Checklist.
+  Don't pre-emptively spend the checklist on the user's behalf.
+
+Don't ask which mode to use — just checkpoint, and say the full close-out is available on
+request. Treating ambiguity as a reason to ask is itself the failure mode: it turns an
+unambiguous cheap default into a prompt, and a repeated "session notes" ends up misread as an
+escalation it never was.
+
+---
+
+## Mode A — Checkpoint
+
+Append one compact block to today's session note. **Do not** touch Roadmap, project
+frontmatter, memory, help content, or the skill tracker.
+
+```bash
+"$OBS" append path="{{project}}/Sessions/{YYYY-MM-DD}.md" content="\n### {HH:MM} — {topic}\n\n- {what landed}\n- Left off: {state}\n" 2>&1 | grep -v "Loading\|out of date"
+```
+
+Write any `Learnings` bullets in the routed shape now (see § Session Learning Protocol) so an
+end-of-day ingest — yours or a script's — can pick them up. That's what makes checkpointing
+safe to keep cheap: the raw material for the full close-out is already captured as you go.
+
+Then stop. Report one line. This is a complete, correct outcome — not a partial close-out.
+
+---
+
+## Mode B — Full close-out
+
+### Before any shared-doc edit: scan for conflict markers
+
+A memory index, a working-state note, session notes, or a roadmap can be written by several
+sessions or processes at once — including an auto-sync plugin, if your vault uses one. A file
+can be sitting in an unresolved merge, and an edit against it either fails to match the
+expected text or writes around the markers and silently corrupts the file.
+
+```bash
+grep -c '<<<<<<<' "$FILE"      # 0 = safe to edit
+```
+
+Non-zero: resolve before editing — don't edit around it.
+
+```bash
+git -C "$(dirname "$FILE")" diff :2:"$FILE" :3:"$FILE"   # ours vs theirs
+# pick a side or merge by hand, then: git add "$FILE"
+```
+
+If the merge/rebase that produced the markers is still in progress and the content is
+recoverable from the remote, aborting and resetting to the remote's copy is often the faster
+exit than resolving by hand. A pull-rebase-then-append helper, if you have one, prevents *new*
+conflicts — it doesn't detect existing ones. Run the grep even when using it.
+
+### Step 0 — Final state first (blocking prerequisite)
+
+Notes must reflect final state, not in-progress state. Before anything below:
+
+1. **Review & suggest improvements** in structure/architecture, documentation, security,
+   skills & methods, efficiency/performance, and future ideas from the session's work.
+2. Present suggestions for approval; implement what's approved.
+3. **Git commit and push.**
+4. **Deploy if needed.**
+5. **Verify the deploy** — curl live endpoints, check CI, confirm a healthy status. Only report
+   "deployed and verified" once you've actually checked.
+6. **THEN** write the notes below — they must describe what actually landed, not what you
+   intend to land.
+
+This skill IS the Feature-Ship Checklist. The Roadmap, help-content, and memory artifacts
+below are the same items the checklist mandates land in the same session as the feature
+commit, alongside the session note itself. If a feature shipped today, all of them complete
+before the session closes — skipping any creates the silent-drift pattern the checklist exists
+to prevent.
 
 ### Agent Teams Architecture
 
-When closing out a session, dispatch these agent teams simultaneously after the End-of-Session Review completes (all model: "sonnet" — doc-writing agents per the model-selection routing matrix):
+When running a full close-out, dispatch these agent teams simultaneously after Step 0
+completes (all model: "sonnet" — doc-writing agents don't need a stronger model):
 
-**Team A — Obsidian Vault Updates** (3 parallel agents):
-- **Agent: Session Note Writer** — Create/update today's session note (Step 1). Needs: session summary, commits, files changed
-- **Agent: Roadmap + Learnings Updater** — Read session notes from today, then update Obsidian Roadmap.md: mark completed items, update active project statuses, add new completed milestone sections with dates. Also update Learnings/ if new gotchas discovered. (Steps 3-4)
-- **Agent: Help Content Updater** — Update in-app help content files if ANY user-facing feature was added/changed this session. ALWAYS run this agent — it determines internally whether changes are needed. (Step 5)
+**Team A — Vault Updates** (3 parallel agents):
+- **Agent: Session Note Writer** — Create/update today's session note. Needs: session
+  summary, commits, files changed.
+- **Agent: Roadmap + Learnings Updater** — Read session notes from today, then update the
+  Roadmap: mark completed items, update active project statuses, add new completed milestone
+  sections with dates. Also update Learnings/ if new gotchas were discovered.
+- **Agent: Help Content Updater** — Update in-app help content if ANY user-facing feature was
+  added/changed this session. ALWAYS run this agent — it determines internally whether changes
+  are needed.
 
 **Team B — Memory & Tracking** (2 parallel agents):
-- **Agent: Memory Updater** — Update memory/MEMORY.md and topic-specific memory files (Step 6). Needs: key decisions, state changes, new patterns
-- **Agent: Skill Tracker** — Update skill-usage.json with session's skill invocations (Step 7). Needs: list of skills used + outcomes
+- **Agent: Memory Updater** — Update `memory/MEMORY.md` and topic-specific memory files.
+  Needs: key decisions, state changes, new patterns.
+- **Agent: Skill Tracker** — Update the skill-usage tracker with this session's skill
+  invocations. Needs: list of skills used + outcomes.
 
-**MANDATORY agents**: Session Note Writer, Roadmap Updater, Memory Updater, and Help Content Updater MUST always be dispatched. Skill Tracker is optional if no skills were invoked.
+**MANDATORY agents**: Session Note Writer, Roadmap Updater, Memory Updater, and Help Content
+Updater MUST always be dispatched. Skill Tracker is optional if no skills were invoked.
 
-**Sequential prerequisite**: The End-of-Session Review (git commit, deploy, verify) MUST complete before dispatching teams. Notes must reflect final state, not in-progress state.
-
-**If the Agent tool is unavailable, run every step INLINE in the main loop — this is NOT a blocked close-out.** Some sessions run under a configuration that forbids subagents unless the user explicitly asks for them. When that is in force, dispatching is not an option and the close-out must still happen: work the numbered steps yourself, in order, in the main loop. **The mandatory list above is a list of OUTPUTS, not a list of subagents** — session note, roadmap, project status, memory, help content. What must not be skipped is the artifact; the dispatch mechanism is an implementation detail.
+**If the Agent tool is unavailable, run every step INLINE in the main loop — this is NOT a
+blocked close-out.** Some sessions run under a configuration that forbids subagents unless the
+user explicitly asks for them. When that is in force, dispatching is not an option and the
+close-out must still happen: work the artifact steps yourself, in order, in the main loop.
+**The mandatory list above is a list of OUTPUTS, not a list of subagents** — session note,
+Roadmap, project status, memory, help content. What must not be skipped is the artifact; the
+dispatch mechanism is an implementation detail.
 
 Two practical notes when running inline:
 
-- It is usually **cheaper**, not a degradation — the main loop already holds the session context each agent would have to be re-fed. Keep the same token discipline the agent prompts impose: targeted greps and line-ranged reads, never a whole-file read of a 1000+ line document.
-- Log it as a **success** with a note that the harness blocked agents, **not** as "partial". Recording it as partial several sessions running is what made this look like a recurring skill failure when it was really a missing branch in this document.
+- It is usually **cheaper**, not a degradation — the main loop already holds the session
+  context each agent would have to be re-fed. Keep the same token discipline the agent prompts
+  impose: targeted greps and line-ranged reads, never a whole-file read of a 1000+ line
+  document.
+- Log it as a **success** with a note that the harness blocked agents, **not** as "partial".
+  Recording it as partial run after run is what makes an environment limitation look like a
+  recurring skill failure.
 
-**Incremental-append preference (token economy)**: if the session already appended milestones to today's note as work landed (the cheap pattern — a one-line append per shipped item during the day), close-out is a TRIM-and-organize of that note, not a from-scratch reconstruction. Agents should be told what already exists in the note so they extend rather than regenerate. Each agent prompt must also scope its reads: targeted greps + line-ranged reads of Roadmap/MEMORY/help content, never whole-file reads of 1000+ line documents.
+**Incremental-append preference (token economy)**: if the session already appended milestones
+to today's note as work landed (the cheap pattern — a one-line append per shipped item during
+the day, i.e. Mode A run repeatedly through the day), close-out is a TRIM-and-organize of that
+note, not a from-scratch reconstruction. Tell agents what already exists so they extend rather
+than regenerate.
 
-Each agent should use the Obsidian CLI auto-detect pattern documented above. All vault agents use `2>&1 | grep -v "Loading\|out of date"` on every CLI call.
+**Full artifact detail — session note template, Roadmap, project frontmatter, help content,
+memory, skill tracker** → read `references/close-out-artifacts.md`. Load it only when actually
+running Mode B; a checkpoint never needs it.
 
-### 1. Create/Update Today's Session Note
-
-File: `{{project}}/Sessions/{YYYY-MM-DD}.md`
-
-**Check if today's note exists:**
-```bash
-"$OBS" read path="{{project}}/Sessions/{YYYY-MM-DD}.md" 2>&1 | grep -v "Loading\|out of date"
-```
-
-**Create new session note** (if none exists today):
-```bash
-"$OBS" create path="{{project}}/Sessions/{YYYY-MM-DD}.md" content="---\ntype: session\ndate: {YYYY-MM-DD}\nfocus: [topic1, topic2]\nkeywords: [keyword1, keyword2, keyword3]\ncommits: []\n---\n\n# Session — {YYYY-MM-DD}\n\n## Focus\n\n> {one-line goal}\n\n## Completed\n\n- [x] {item}\n\n## Key Decisions\n\n> {decision with rationale}\n\n## Learnings\n\n> {patterns discovered}\n\n## Left Off\n\n> {state and next steps}\n\n## Files Changed\n\n| File | Change |\n|------|--------|\n\n## Commits\n\n\`\`\`\n{hash} {message}\n\`\`\`" 2>&1 | grep -v "Loading\|out of date"
-```
-
-**Append additional session** (if note already exists for today):
-```bash
-"$OBS" append path="{{project}}/Sessions/{YYYY-MM-DD}.md" content="\n---\n\n## Session 2 — {topic}\n\n### What Was Done\n..." 2>&1 | grep -v "Loading\|out of date"
-```
-
-**Set frontmatter properties** — Note: some Obsidian versions have a bug where `property:set` silently no-ops on externally-written files (confirmed in Obsidian 1.12.7). If this affects you, edit frontmatter directly with the Edit tool instead. Workaround: read the file, find the YAML frontmatter block between `---` delimiters, then Edit to update the values. Example:
-
-```yaml
 ---
-commits: [abc1234, def5678]    # append new SHA to existing array
-keywords: [deploy, bug-fix, refactor]  # merge with existing list
----
-```
-
-Re-check this status in ~1 week — if Obsidian patches the bug, the `property:set` CLI route can return.
-
-**Keywords**: Add 3-8 retrieval keywords per session — terms someone would search for later.
-Include: technologies used, problem types solved, components touched, concepts discussed.
-Good: `[timer-system, cache-persistence, react-hooks, dashboard]`
-Bad: `[coding, work, stuff]`
-
-### 2. Update View/Component Docs (if changed)
-
-Only update if the component was modified this session. Use `append` for additions:
-```bash
-"$OBS" append path="{{project}}/{ViewName}/{ViewName}.md" content="\n## {Date} — {Change}" 2>&1 | grep -v "Loading\|out of date"
-```
-
-### 3. Update Roadmap (MANDATORY every session)
-
-File: `{{project}}/Roadmap.md`
-
-**Token economy**: do NOT read the full Roadmap.md if it is large. Grep for the section headers and project names touched this session, then read ONLY those line ranges. Same rule for MEMORY.md — the index is loaded in context already; never re-read the whole journal.
-
-**Always do ALL of these:**
-1. **Read the roadmap sections relevant to this session's work** (targeted grep + ranged reads) to understand current state
-2. **Update "Current State" paragraph** date and add any new facts about the system
-3. **Update "Active Projects" table** — change statuses for projects worked on this session
-4. **Mark completed items** in Immediate Backlog and lower sections
-5. **Add a "Completed — {date}" section** with all items finished this session (append before Long-Term Ideas)
-6. **Add new backlog items** if any were discussed
-
-**Mark tasks complete via CLI:**
-```bash
-"$OBS" task path="{{project}}/Roadmap.md" line={N} done 2>&1 | grep -v "Loading\|out of date"
-```
-
-**List open roadmap tasks:**
-```bash
-"$OBS" tasks todo path="{{project}}/Roadmap.md" verbose 2>&1 | grep -v "Loading\|out of date"
-```
-
-**Append new backlog items:**
-```bash
-"$OBS" append path="{{project}}/Roadmap.md" content="\n- [ ] {new item}" 2>&1 | grep -v "Loading\|out of date"
-```
-
-**If you maintain a derived/materialized backlog or queue file** (e.g. a generated "what's ready to work on" list), don't hand-edit that file — update its SOURCES (the roadmap item, the todo, the project note) and regenerate it. A derived artifact that gets hand-edited drifts from its sources the next time it regenerates, silently discarding the manual edit.
-
-### 3a. Update Project Frontmatter (MANDATORY when a project shipped or changed status)
-
-If your vault tracks individual projects as separate files, edit their frontmatter when status changes. Use the Edit tool directly (`property:set` is broken in some Obsidian versions — see Step 1):
-
-```yaml
-status: shipped          # active | blocked | shipped | paused — flip to shipped when the work is merged/live
-shipped: 2024-01-15      # YYYY-MM-DD the status flipped to shipped (leave blank otherwise)
-last_update: 2024-01-15  # always bump to today when touched
-```
-
-Only flip to `shipped` when the work is actually merged/live — leave genuinely in-flight projects `active`/`blocked`/`paused`.
-
-### 4. Update Learnings (if new patterns/gotchas)
-
-Directory: `{{project}}/Learnings/`
-
-**Check existing headings before adding** (avoid duplicates):
-```bash
-"$OBS" outline path="{{project}}/Learnings/Gotchas.md" 2>&1 | grep -v "Loading\|out of date"
-"$OBS" search query="{topic}" path="{{project}}/Learnings" 2>&1 | grep -v "Loading\|out of date"
-```
-
-**Append to existing file:**
-```bash
-"$OBS" append path="{{project}}/Learnings/Gotchas.md" content="\n### {Title}\n{content}" 2>&1 | grep -v "Loading\|out of date"
-```
-
-### 5. Update Help Content (MANDATORY — agent determines if changes needed)
-
-The Help Content Updater agent MUST always be dispatched. It reads the session's completed items and determines internally whether in-app help content needs updating. If no UI-facing changes were made, the agent reports "no changes needed" and exits.
-
-When user-facing features, workflows, or UI were added/changed/removed, update the in-app help documentation files.
-
-**Structure**: Each help content file exports an array of section objects:
-```js
-{ id, title, keywords, description, subsections: [{ id, title, keywords, searchText, content: JSX }] }
-```
-
-**When to update**:
-- New view/tab added → add a new top-level section
-- New feature in existing view → add subsection or update existing subsection content
-- Workflow changed (e.g., new button, renamed status, changed filter behavior) → update the relevant subsection
-- Feature removed → remove the subsection (don't leave stale docs)
-
-**How to update**:
-1. Read the relevant help content file to find the section/subsection to update
-2. Use the Edit tool to modify the content JSX in place
-3. Keep the same style: short paragraphs, use helper components, match existing tone
-4. Add appropriate `keywords` and `searchText` for discoverability
-
-**Skip if**: Only backend/API changes, no UI-visible behavior change, or only CSS tweaks.
-
-### 6. Update Memory Files
-
-- `memory/MEMORY.md` — update task statuses, add new patterns (use Edit tool — this is in the repo, not the vault)
-- Create topic-specific memory files as needed (e.g., `memory/debugging.md`)
-
-### 7. Update Skill Usage Tracker
-
-Append this session's skill usage to `.claude/skills/skill-creator/skill-creator-workspace/skill-usage.json`.
-
-For each skill invoked during the session, record:
-- `skill`: skill name
-- `count`: how many times it was invoked
-- `outcome`: "success", "partial" (some steps skipped), or "failed"
-- `notes`: brief note on what happened (especially issues or corrections)
-
-Also update the `aggregate.skill_frequency` counts and `aggregate.total_sessions_tracked`.
-
-If a skill was relevant but NOT invoked (e.g., should have used `/research-gate` but didn't), log it in `skills_not_invoked_but_relevant`.
-
-**Trigger `/skill-audit`** if any of these are true:
-- 5+ skills were modified this session
-- It's been 14+ days since `aggregate.last_audit`
-- A skill failed or produced incorrect output
 
 ## Session Learning Protocol (EVERY SESSION)
 
@@ -256,32 +223,32 @@ write it as a gotcha — a real process friction will recur and get a second cha
 
    The corollary is a *writing* obligation: **write the learnings you want routed in that
    shape as you write the note.** Otherwise ingest legitimately finds nothing and the
-   session's frictions evaporate — the exact failure the step exists to prevent.
+   session's frictions evaporate — the exact failure the step exists to prevent. This is also
+   why a checkpoint should write learnings in the routed shape immediately (Mode A above),
+   rather than deferring them to a from-memory reconstruction at full close-out.
 
 **Architecture decisions**: Prioritize critical thinking and scalable architecture over speed. Ask high-level questions to build a framework. When a function/feature has changed scope, point it out and ask if the architecture should change.
 
-## End-of-Session Review (before writing notes)
+## Relationship to the Feature-Ship Checklist
 
-When the user says they're "closing up", "done for the day/night", or similar:
+The full close-out **is** the Feature-Ship Checklist. Session note, Roadmap, project status,
+memory, and help content are the same items the checklist mandates land in the same session as
+the feature commit. If a feature shipped today, they complete before the day closes — skipping
+any creates the silent drift the checklist exists to prevent.
 
-1. **Review & suggest improvements** in:
-   - Structure & architecture (component organization, shared utilities)
-   - Documentation (CLAUDE.md, skills, memory files — condense/update)
-   - Security (secrets exposure, input validation, CSP headers, rate limiting)
-   - Skills & methods (new skills needed, existing skills outdated)
-   - Efficiency & performance (caching, bundle size, parallel operations)
-   - Future development ideas based on current session's work
-2. Present suggestions to user for approval
-3. Implement approved changes
-4. **Git commit and push** to dev
-5. **Deploy if needed** (worker deploy, Pages deploy, etc.)
-6. **Verify deploy** — curl live endpoints, check CI, confirm HTTP 200. Report "deployed and verified"
-7. **THEN** proceed with Obsidian session notes (steps 1-6 above) — notes must reflect final state, not in-progress state
+A **checkpoint does not discharge the checklist.** If a feature shipped, the day still needs
+one full close-out — **but the user calls for it, not you.** Surface the debt in one line —
+"a feature shipped today, so the day still owes a full close-out when you want it" — and leave
+the timing to them.
 
 ## Important
 
 - **Prefer Obsidian CLI** for vault operations (create, append, read, tasks, search)
-- Use Edit tool only for repo-local files (memory/, CLAUDE.md)
+- Use Edit tool only for repo-local files (memory/, CLAUDE.md) and for frontmatter — some
+  Obsidian versions silently no-op a CLI `property:set` against externally-written files; if
+  that bites you, edit the YAML block directly instead
 - Keep notes concise and actionable
 - Always include "Left Off" so the next session can resume quickly
-- Use frontmatter to tag sessions for later querying (edit directly via Edit tool if `property:set` is broken — see Step 1)
+- A day that ends on checkpoints alone leaves the Feature-Ship artifacts behind for work that
+  already shipped — if your vault has a project-status view, spot-check the next morning
+  whether yesterday actually got a full close-out, not just a note

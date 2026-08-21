@@ -98,6 +98,72 @@ git branch -d <branch-name>                 # if a branch was created for it
 
 Periodic hygiene: `git worktree list | wc -l` — if it climbs past a handful, audit each worktree's HEAD with `git merge-base --is-ancestor <wt-HEAD> origin/<main-branch>` and bulk-remove only those already merged. If you find yourself hand-rolling this create/list/teardown/prune cycle often, wrap it in a small helper script (create/list/finish/prune subcommands) rather than reproducing the recipe by hand each time — cheap to write, and it removes the "did I remember every step" risk.
 
+## Bulk Cleanup — When Worktrees Have Already Piled Up
+
+**The single-worktree teardown commands above silently fail at scale, which is exactly how a
+list balloons into the hundreds despite following this skill.** Three mechanics defeat a naive
+bulk-removal loop, in this order:
+
+**1. A locked worktree blocks BOTH remove and prune.** Session-created worktrees are often
+created locked, so `git worktree remove --force` fails on them and `git worktree prune` skips
+them too — a bulk loop reports mass failures with no obvious cause. The lock lives at
+`.git/worktrees/<id>/locked`. Check the real spread before looping:
+
+```bash
+ls .git/worktrees | wc -l                        # registrations (may exceed live dirs)
+ls .git/worktrees/*/locked 2>/dev/null | wc -l   # how many are locked
+```
+
+**2. `git worktree prune` honors a grace period by default** (`gc.worktreePruneExpire`,
+typically 3 months) — a registration whose directory is already gone is NOT reaped, and prune
+prints nothing, which reads as "nothing to do." Always pass `--expire=now` for an active
+cleanup.
+
+**3. Removing worktrees one at a time is slow** (each deletes a full directory tree).
+Deleting the directories directly and reaping every stale registration in ONE prune is far
+faster. Safe ordering — delete the directory, clear the lock **only** for registrations whose
+directory is already gone, then prune:
+
+```bash
+# per target: delete the worktree directory (fs remove, recursive)
+# then, for every .git/worktrees/<id> whose gitdir path no longer exists: rm .git/worktrees/<id>/locked
+git worktree prune --expire=now
+```
+
+Scoping the unlock to *missing* directories is the safety invariant — a worktree still on disk
+is never touched, so an active session can't be unlocked out from under it.
+
+### Before deleting: what "dirty" actually means here
+
+**Don't trust `git status` dirtiness alone as evidence of real work.** A worktree whose index
+has been wiped shows as heavily modified (mass staged deletions) while `git diff` is empty and
+the actual content is intact but untracked — the entry that looks most dangerous to delete can
+hold nothing at all.
+
+The checks that actually decide, cheapest first:
+
+1. **`git cherry origin/<default-branch> <branch>`** — empty means every commit on the branch
+   is already upstream. Patch-id aware, so it survives a squash-merge; ancestry alone does not.
+2. **Untracked files that are genuinely novel** — diff the untracked set against
+   `git ls-tree -r origin/<default-branch> --name-only`. Most "novel"-looking untracked files
+   turn out to be untracked *copies* of already-tracked files.
+3. **Novel source files against history** — `git log --all --diff-filter=D -- <path>` for
+   anything still novel after step 2. Most turn out to be deliberate, recoverable deletions
+   from a real commit; a file with genuinely no history anywhere is the rare one worth
+   archiving before you delete the worktree.
+
+Archive that genuinely-novel set before deleting (cheap insurance, and it makes the delete
+reviewable), and **exclude your own current session's worktree** — it's registered like any
+other and is trivially the newest by modified time.
+
+**`git worktree remove` never deletes the branch** — a worktree removed by mistake loses only
+the working directory; its commits survive on the branch. Clean up branches separately with
+`git branch -d` (not `-D`) against `--merged origin/<default-branch>`, so git's own merge
+check is a second gate — it also refuses to delete a branch currently checked out anywhere.
+
+Finish with `git fsck --connectivity-only`: a registration whose `HEAD` resolves to nothing is
+a corrupt empty shell, safe to clear the same way as a missing-directory registration.
+
 ## Sibling Worktrees (per-concurrent-session isolation)
 
 Distinct from the merge flow above: when several sessions run at once, each concurrent task should get its **own sibling worktree** — a peer directory next to the main checkout (e.g. `../<repo>-<topic>`) — so one session's branch switch or cleanup can't clobber another's uncommitted work. Use this instead of sharing a single checkout across sessions. For a throwaway, non-`cd`'d scratch tree, a lighter alternative is a leading path variable pointing into a scratch/temp directory.

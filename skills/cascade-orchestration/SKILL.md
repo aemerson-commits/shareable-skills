@@ -139,6 +139,7 @@ The screenshot directory becomes the audit trail for the deploy. Archive it alon
 | All agents share one worktree | Race conditions on file writes | Each code-modifying agent gets own worktree |
 | Agent does research + implementation | Scope creep, context bloat | Separate research agents from implementation agents |
 | Sequential when parallel is possible | Wastes time | If tasks have no data dependency, parallelize |
+| Fan-out when stages actually depend on each other | Redundant context re-fed to every agent, no real concurrency gained — a later "parallel" agent just re-derives what an earlier one already produced | Check for a real data dependency chain before splitting into parallel agents; collapse to a sequential pipeline (or one agent) if a later stage reads what an earlier stage wrote |
 | Parallelizing tiny tasks | Agent overhead > task time | Only parallelize tasks that take 30s+ each |
 
 ## Skill Integration Map
@@ -152,7 +153,7 @@ The screenshot directory becomes the audit trail for the deploy. Archive it alon
 | `/review-impl` | Sequential Pipeline | 3 context agents → 3-7 reviewers → synthesis |
 | `/pre-merge-review` | Cascading Sub-Teams | 5 domains x 1-3 sub-agents each (up to 12 total) |
 | `/deploy-all` | Per-Project Propagation + Conditional | N Pages agents, then Worker agents |
-| `/session-notes` | Fan-Out/Fan-In + Conditional | 5 parallel: vault, docs, help, memory, tracker |
+| `/session-notes` | Sequential Pipeline (1 agent) | ONE agent runs stages in order (vault note → docs → memory) instead of N parallel agents — the stages read each other's output, so parallelizing them re-fed overlapping context without buying real concurrency; deterministic bookkeeping steps collapse into a single script call |
 | `/debug-collaborate` | Fan-Out/Fan-In | 3-4 hypothesis investigators → synthesis |
 | `/write-plan` | Sequential Pipeline | Research → decompose → task list with file paths |
 | `/skill-audit` | Fan-Out/Fan-In | 4 parallel checks → compliance check → report |

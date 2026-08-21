@@ -1,7 +1,7 @@
 {
   "name": "shareable-skills",
-  "version": "5.5.1",
-  "description": "49 Claude Code skills + continuous learning pipeline — development pipeline, build orchestration, diagnostic escalation, design, document generation, creative tools, session management, skill maintenance, and automated pattern extraction. Built on parallel agent teams.",
+  "version": "5.6.0",
+  "description": "50 Claude Code skills + continuous learning pipeline — development pipeline, build orchestration, diagnostic escalation, design, document generation, creative tools, session management, skill maintenance, and automated pattern extraction. Built on parallel agent teams.",
   "author": "aemerson-commits",
   "skills": [
     "skills/grill-me",
@@ -10,6 +10,7 @@
     "skills/review-impl",
     "skills/cascade-orchestration",
     "skills/debug-collaborate",
+    "skills/consult",
     "skills/persistent-issue",
     "skills/deep-root-cause",
     "skills/full-stack-trace",
@@ -55,7 +56,7 @@
     "skills/design-reverse-engineer"
   ],
   "categories": {
-    "Development Pipeline": ["skills/grill-me", "skills/research-gate", "skills/write-plan", "skills/review-impl", "skills/cascade-orchestration", "skills/debug-collaborate"],
+    "Development Pipeline": ["skills/grill-me", "skills/research-gate", "skills/write-plan", "skills/review-impl", "skills/cascade-orchestration", "skills/debug-collaborate", "skills/consult"],
     "Build Orchestration": ["skills/full-stack-build", "skills/propagate-feature", "skills/worker-build", "skills/deploy-all", "skills/worktree-guard"],
     "Quality & Verification": ["skills/verify-complete", "skills/pre-merge-review", "skills/schema-check", "skills/env-audit", "skills/audit-components", "skills/webapp-testing", "skills/data-reconciliation"],
     "Diagnostic Escalation": ["skills/persistent-issue", "skills/deep-root-cause", "skills/full-stack-trace", "skills/isolation-test", "skills/temporal-forensics", "skills/regression-bisect"],

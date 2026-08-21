@@ -117,6 +117,16 @@ Read the last 2-3 session notes from `{{project}}/Sessions/` (glob for `*.md`, p
 
 Also check if yesterday's session note exists — if not, flag it (session notes may have been missed).
 
+**Check whether it was actually closed out, not just checkpointed.** If your session-notes
+process distinguishes a cheap mid-day checkpoint from a full end-of-day close-out, look for
+whatever marker the full close-out leaves on the note (a frontmatter stamp, a dated header —
+whatever your process uses). A day can end on checkpoints alone if the user never said an
+end-of-day phrase, which leaves the Roadmap, project status, memory, and help content behind
+for work that already shipped; a check that only looks for a missing note can't tell a
+checkpoint-only day from a properly closed one. If yesterday's note exists but carries no
+close-out marker, surface it — *"yesterday ended on checkpoints — Roadmap/status/memory may be
+behind"* — and offer to run the full close-out for that date before starting new work.
+
 ### Step 4 — Check Memory State (parallel, use Agent)
 
 Read and summarize:
@@ -125,6 +135,15 @@ Read and summarize:
 3. `memory/MEMORY.md` Active Alerts section — list all active warnings
 
 If `promises.md` or `working-state.md` don't exist, that's fine — report clean state.
+
+**If your memory index gets truncated or summarized past some size at session load**, that
+cost already landed by the time anyone notices — morning is when you can still act on it, not
+after another day of accumulation on top. If you have a tool that reports index size and
+archive candidates, run it here (read-only) and surface a line only when it actually flags
+something ("N entries archivable, index over budget"); otherwise stay silent. Prefer a
+mechanism that only *archives* — moves old entries verbatim into a dated file — over anything
+that rewrites or condenses content; a lossy condense of a memory index is a far easier mistake
+to make (and to regret) than letting the file grow a bit longer.
 
 **Landed-state guard.** Memory is a point-in-time snapshot — a note that says "dev-only" or "pending" can be stale if a later session (or a concurrent one) already shipped it. Before presenting a memory item as still-pending, spot-check anything that cites a PR number or commit SHA against live git/CI (`git log`, `gh pr view`, or your deploy tool) rather than repeating the note's claim verbatim. Flag mismatches ("marked dev-only, actually already on prod") rather than silently trusting or silently correcting — the user decides how to reconcile it.
 
@@ -249,6 +268,13 @@ Two failure modes to design against:
   itself as the wrong owner and the boxes stay open.
 - **Prose is not a checkbox.** If a downstream generator filters on `[ ]` versus `[x]`, writing
   "DONE" in the body clears nothing. Tick the **source** box, in the file the generator reads.
+
+**Then actually retire what you ticked, don't just leave it checked.** A ticked box is still a
+rendered row — if the pipeline view itself is DERIVED (regenerated from the source notes and
+todos, not hand-maintained), ticking a source alone doesn't remove the row until the generator
+re-runs. Tick every source first, *then* regenerate, or the next regen re-emits what you meant
+to clear. Otherwise a fully closed cycle still reads as a wall of open work, and the signal the
+checklist exists to carry gets buried under its own history.
 
 Keep it to the top few per bucket; the full board lives in whatever project-tracking view you use.
 

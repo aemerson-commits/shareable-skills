@@ -16,9 +16,23 @@ Verify every import in each component resolves to an actual export:
 - Check root `App.jsx` imports
 
 ### 2. Props Consistency
-Verify props passed from App.jsx match what each component destructures:
-- Props passed but never destructured (wasted, non-breaking)
-- Props destructured but never passed (will be `undefined`, likely a bug)
+Verify props passed from App.jsx match what each component destructures.
+
+**Derive the render-site list fresh every audit — don't maintain a static table of components and their expected props.** A hardcoded table rots: a rename, a removed prop, or a component added after the table was written all escape the audit while the table's presence reads as complete coverage. A checklist that covers *some* render sites is worse than none — it converts "verify everything" into "verify these rows."
+
+Derive the full set, then read every site:
+
+```bash
+git fetch origin -q || { echo "ABORT: fetch failed — deriving from a stale tree recreates the exact staleness this check exists to catch"; exit 1; }
+git show origin/main:src/App.jsx | grep -oE '<[A-Z][A-Za-z0-9_]*' | sort -u
+```
+
+- **Every capitalized JSX tag is a render site — not just names ending in a common suffix** like `View` or `Panel`. A suffix-only pattern silently omits any component whose name doesn't happen to match it, often including the app's own primary/root component. A letter-only regex additionally drops any name containing a digit.
+- For each site, read the JSX attributes actually passed, then read the component's function signature, and compare. Flag:
+  - Props passed but never destructured (wasted, non-breaking)
+  - Props destructured but never passed (will be `undefined`, likely a bug)
+- Derive against the remote tracking branch (`origin/main`), not your local checkout — a feature branch can sit many commits behind and hand you stale answers.
+- In the report, state the derived count ("App.jsx renders N distinct component tags; N/N checked") so a partial pass is visible as partial.
 
 ### 3. Shared Utility Usage
 Verify no component has local copies of functions that exist in shared utilities:

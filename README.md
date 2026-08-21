@@ -1,6 +1,6 @@
 # Shareable Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 49 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
+A complete development methodology built on parallel agent teams. 50 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
 ## Quick Start
 
@@ -44,6 +44,7 @@ When things go wrong:
 | `/review-impl` | Adversarial review with weighted grading (A/B/C/F), 3 code reviewers + Playwright visual verification. | 3 parallel + 1 visual |
 | `/cascade-orchestration` | 5 reusable agent team patterns: Fan-Out/Fan-In, Sequential Pipeline, Per-Project Propagation, Cascading Sub-Teams, Conditional Dispatch. | Reference (no agents) |
 | `/debug-collaborate` | Multi-agent collaborative debugging — parallel hypothesis generation and testing. | 4 parallel |
+| `/consult` | Independent second opinion on a DECISION (not a diff) from a second model/agent — transfer the question, not your reasoning; sealed recommendation; disagreement is the product. | 1 consultant (background) |
 
 ### Build Orchestration
 
