@@ -21,9 +21,44 @@ Use this pattern for a single-shot script that needs `process.env.*` from `.env`
 |------|-------------|
 | Session scratchpad / OS temp dir (e.g. `$SCRATCHPAD` if the harness injects one, else `/tmp/<name>.mjs`) | **Default.** Investigation probes, DB/SQL behavior tests, API shape checks. Isolated from the repo, so nothing exploratory can be accidentally committed. |
 | Inside the repo — a session worktree, or `.claude/reviews/<feature>-verify.mjs` | **Required whenever the script has a BARE npm import** (see below). Also use when the script should be committed as evidence of a verification. |
+| A gitignored scratch dir inside the repo (e.g. `.scratch/patch-<what>.mjs`) | **Mechanical source-file rewrites** — see § Patch scripts below. Needs a repo-relative path to read/write the target, so it has to live in the repo, not the OS scratchpad. |
 | Project root | **Never.** Pollutes the git working tree. |
 
 Default to the scratchpad. Move into the repo when you need real dependencies, or when you want the script committed as evidence.
+
+### Patch scripts — mechanical source transformations
+
+When the same edit has to land in a dozen+ places in one file — renaming a pattern throughout a
+component, converting a tag format everywhere it appears, a conditional touched at every call
+site — write a Node script that reads the target file, transforms it, and writes it back. Keep
+single-point edits in your normal editor tool; reach for a patch script only when the
+transformation itself is the unit of work.
+
+```bash
+node --check patch-something.mjs && echo OK
+node patch-something.mjs && grep -c "expected-pattern" path/to/target.jsx
+npm run build > build.log 2>&1; echo "EXIT=$?"
+```
+
+Verify by grepping the **target** for the post-condition, not by re-reading the script — the
+script running without throwing says nothing about whether it matched anything.
+
+**Lint the target by hand — a post-edit auto-lint hook keyed to editor-tool calls does not fire
+for it.** If your harness runs a lint hook wired to `Edit`/`Write`/`MultiEdit` tool invocations, a
+patch script writing through `fs` from a shell-invoked process is invisible to it: the edit lands
+with zero lint coverage. A build does not close that gap — it catches syntax and type breakage,
+never a lint-only rule. Run the linter on the target file explicitly before calling the patch done:
+
+```bash
+npx <linter> check path/to/target.jsx   # e.g. biome check / eslint
+```
+
+Same shape as any other tool-matched hook a shell-level write slips past — the hook trusts the
+tool name, not the file's actual change.
+
+A repo-local scratch dir is also exposed to `git add -A` sweeping a leftover patch script into an
+unrelated commit. Gitignore the directory you use for these, and prefer an explicit pathspec
+`git add <files>` over `-A` on any commit made while a patch script is still on disk.
 
 ### The bare-import trap
 

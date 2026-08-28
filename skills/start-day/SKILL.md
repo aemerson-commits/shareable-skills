@@ -73,6 +73,16 @@ otherwise a single "Workspace: intact" line.
 
 ### Step 1c — In-Flight Overlap Check (repo-local, instant)
 
+**If dead session worktrees pile up faster than they're cleaned,** sweep them before reading
+the overlap list below, or the graveyard drowns the real signal. A worktree that should have
+been removed when its session ended typically survives for one of three reasons: the session
+was killed (window closed, process ended) without its cleanup hook ever firing; the worktree
+was left in a locked "still checking out" state by an add that got interrupted, and removal
+tooling refuses to touch a locked tree; or the branch itself outlived the worktree and got
+rebuilt from it on the next resume. A sweep step that only removes a worktree once its tree is
+clean and every commit is already on the integration branch (by patch, not just by ancestry) is
+safe to run unattended.
+
 Surface what every OTHER session is already working on, so the day's plan routes new work
 to DISTINCT topics. When sessions run in parallel, the one collision that isolation cannot
 prevent is two of them building the same feature — you get duplicate branches and duplicate
@@ -248,6 +258,7 @@ new → in-progress → triaged, severity desc, newest first. Surface:
 If the project uses a gated project pipeline (e.g. Obsidian project notes with gate state), read the open notes and build three buckets:
 
 1. **Blocked on you** — projects at a gate requiring a human decision (e.g. threat assessment, signoff) OR any unanswered open question. These are the "Questions for Me" — the things only you can unblock. List each with its one-line question/decision. Lead the plan with this bucket.
+   - **A PR's checks stuck at `action_required` belongs here too, not in the agent-ready queue.** Some CI platforms hold workflow runs for human approval whenever the PR was opened by a bot/automation account — the checks read as pending or red, but nothing is actually failing and no amount of agent effort clears it; only a person clicking "approve" does. Folding that state into an ordinary "failing" classification routes it to an agent with an unfixable instruction.
 2. **Agent-ready (today's unattended queue)** — projects flagged as unattended-runnable with no unanswered questions, at an active gate (research, scope, build, verify, visual). These are what an overnight agent skill or `/advance-gate` can drive forward without you. Order by priority then value.
 3. **Needs scoping** — open projects not yet ready for unattended work, stuck early (no plan written). Candidates for a self-refill research pass if the agent-ready queue is thin.
 

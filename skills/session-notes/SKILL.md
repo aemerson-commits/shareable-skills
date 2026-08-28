@@ -252,3 +252,10 @@ the timing to them.
 - A day that ends on checkpoints alone leaves the Feature-Ship artifacts behind for work that
   already shipped — if your vault has a project-status view, spot-check the next morning
   whether yesterday actually got a full close-out, not just a note
+- **If you script any part of the close-out, have the script itself write the "this day is
+  closed" marker, not a manual edit at the end of the checklist.** A hand-written last step can
+  be silently skipped with no trace — the artifacts it was meant to certify (Roadmap, memory,
+  etc.) can all exist while the marker never gets written, and the next morning's check then
+  reports a close-out as still owed when it already happened. A script-written marker can
+  instead refuse itself and say which earlier step failed, which is the only way "the checklist
+  ran" stays a claim you can trust rather than one you hope is true.

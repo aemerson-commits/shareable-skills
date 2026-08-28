@@ -26,6 +26,21 @@ Use this skill before any feature that touches 3+ files, involves external APIs/
 
 ## Process
 
+### Phase 0: Is someone already building this? (before dispatching research agents)
+
+```bash
+gh pr list --state open --search "<feature-keyword>"
+```
+
+An open PR on this topic is the cheapest constraint there is, and the only one that can make the
+whole gate unnecessary. If one covers the feature, say so and stop — don't dispatch research
+agents against work that's already in review.
+
+**A file-level check on the target branch does NOT answer this.** An unlanded PR has no files on
+the branch it's headed for, so `git show <remote>/<branch>:<path>` reports "not built" for work
+that's nearly done. Check both — the file tree and open PRs — and if the team ships from more
+than one repo, check every repo the feature could land in, not just the one you're sitting in.
+
 ### Phase 1: Constraint Discovery — Parallel Research (3-5 min)
 
 Dispatch 4-5 research agents simultaneously (all model: "opus"):

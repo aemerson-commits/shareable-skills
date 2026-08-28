@@ -1,6 +1,6 @@
 # Shareable Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 50 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
+A complete development methodology built on parallel agent teams. 51 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
 ## Quick Start
 
@@ -65,6 +65,7 @@ When things go wrong:
 | `/schema-check` | Verify DB schema, KV keys, and env bindings before writing queries or endpoints. | Single agent |
 | `/env-audit` | Audit environment variables across all projects — detect missing secrets, compare code refs against deployed config. | 4 parallel scanners |
 | `/audit-components` | Audit component health — verify imports, props, shared utility consistency across all projects. | N project auditors + 2 cross-project |
+| `/gh-repo-recon` | Read a GitHub repo you haven't cloned — code, issues/PRs, and governance posture (rulesets, branch protection, deploy keys, Dependabot) via the `gh` API. | Single agent |
 | `/webapp-testing` | Playwright toolkit for testing web apps — CF Access auth, route intercepts, screenshots. | Single agent |
 | `/data-reconciliation` | Trace data through pipeline layers to find where values diverge. For stale/wrong data debugging. | 4 layer samplers |
 

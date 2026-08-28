@@ -17,6 +17,18 @@ Create a structured implementation plan that can be executed by subagents or fol
 - `/research-gate` should have run first (constraints and approach already decided)
 - If not, ask: "Should I run /research-gate first, or do you already know the approach?"
 
+## Step 0 — Check for in-flight overlap (before writing a single task)
+
+Check open PRs/branches for work that already covers what you're about to plan — narrow the
+task onto the existing PR or drop it, rather than write a second implementation.
+
+**Checking the trunk branch for the files you'd create is not this check.** A branch that
+hasn't merged yet has none of its files on the trunk, so a file-existence check reports "nothing
+there" for work that's 90% done and sitting in review. Run both: the file check answers "has
+this shipped," the open-PR/branch list answers "is someone already building this." Skipping the
+second half is the recurring version of this mistake — a plan gets written duplicating a PR
+that's been open for hours, because the file check came back clean.
+
 ## Plan Document Structure
 
 Create `docs/plans/YYYY-MM-DD-{feature-slug}.md`:
@@ -125,6 +137,60 @@ Merge order + guardrails: [base-SHA per stage, /worktree-guard before copy, comm
 
 **Exception**: schema migrations that multiple tasks depend on can be a standalone Task 0. That's the only horizontal slice allowed.
 
+## Gate Ledger (optional — for plans where quiet incompleteness is costly)
+
+A `Verify:` line inside a task is prose in a document nothing re-checks. It catches nothing if
+the work gets built four-fifths of the way and the fifth piece is just never mentioned — no
+completion claim was made that contradicts anything, so a lexical "did you verify this claim"
+check has nothing to fire on. For a plan where that failure mode is expensive, write a separate
+ledger file alongside the plan and make each outcome a gate with its own proving command.
+
+**Format** — one gate per independently omittable outcome:
+
+```markdown
+# Gates: <feature>
+
+- [ ] G1: the endpoint persists a valid row and returns its id
+  CHECK: node scripts/verify-import.mjs
+  EXPECT: import verification passed
+  EVIDENCE: pending
+
+- [ ] G2: the operator can see a dropped row and why it dropped
+  EVIDENCE: pending
+```
+
+A gate is met only when its `CHECK:` process exits 0 **and** the combined output contains the
+`EXPECT:` string. A ticked box whose `EVIDENCE:` still reads `pending` counts as unmet — that
+rule is what stops the ledger from being closed by editing a character instead of doing the
+work. Gates with no automatable check (a manual/visual outcome) carry neither field and are
+marked met by hand once actually verified.
+
+**Rules that decide whether a ledger is worth anything:**
+
+- **The check must be able to fail.** A script that always prints its success string, or an
+  `EXPECT:` matched against unconditional output, is a green gate that proves nothing — test
+  every check against a deliberately broken version of the thing it's checking before trusting
+  it.
+- **Never let the check accept a hand-supplied number as its own proof.** Make it measure the
+  figure from the real source and apply the acceptance rule itself; a check seeded with
+  invented inputs can only confirm the hypothesis that produced it.
+- **One gate per independently omittable outcome.** If half a gate could ship without the other
+  half, split it into two.
+- **When a gate turns out to be impossible, don't delete it** — mark it abandoned with the
+  reason (`ABANDON: G2 <why, and who/what it's handed to>`) so the gap stays visible instead of
+  quietly vanishing from the ledger.
+
+This pattern works as plain discipline even with no tooling behind it — write the ledger before
+Task 1, don't tick a box until its check has actually been re-run. If your project has some way
+to enforce a completion check (a pre-commit/pre-merge hook, a CI step), wiring it to read this
+file turns "the ledger says so" into something a machine — not just the reader — verifies. A
+small MIT-licensed reference implementation of the ledger-checking half exists at
+github.com/Leonxlnx/unlazy if you want a starting point rather than writing the checker
+yourself.
+
+**Skip this** for single-file fixes, factual replies, and cosmetic changes — it costs real
+authoring time and belongs where quiet incompleteness would actually cost more.
+
 ## Plan Quality Checklist
 
 Before presenting the plan to the user, verify:
@@ -132,6 +198,7 @@ Before presenting the plan to the user, verify:
 - [ ] **Every step has exact file paths** — no "update the relevant file"
 - [ ] **Code blocks are complete** — not "add error handling" but the actual try/catch
 - [ ] **Each task is independently verifiable** — has a verify step
+- [ ] **Gate Ledger considered for high-stakes plans** — see the Gate Ledger section; skip the checkbox itself for routine work
 - [ ] **Scope per task is S or M** — break L tasks into smaller pieces
 - [ ] **Every phase is a vertical slice** — each one produces a testable end-to-end increment (see Vertical Slicing section above). No "all backend then all UI" plans.
 - [ ] **User-flow diagram included for multi-screen features** — optional, but for any feature with a multi-step user journey, add the mermaid `flowchart` (see Plan Document Structure) so the screens/branches are explicit before building. Skip for API-only / single-screen / cosmetic work.
