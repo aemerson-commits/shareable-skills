@@ -65,6 +65,20 @@ Don't block on it. A running lookup is an unsettled prerequisite: only the quest
 
 The **decisions** are the user's. Put each to them and wait.
 
+## Chat Surface Mode (phone / remote)
+
+When the grilling runs on a chat surface instead of a desktop terminal — a phone chat app, a
+remote/cloud session, or the user saying "phone mode" — change the pacing and nothing else:
+
+- Ask **1–2 questions per turn** (frontier order, most-unlocking first), not the whole round.
+  Numbered-batch dictation works at a desk; on a phone it's a wall of text.
+- Keep the per-question format: the question, then ➡️ the recommended answer and why.
+- Keep every message short enough to read comfortably on a phone.
+- The tree, the frontier, self-served facts, the glossary pass, and termination are unchanged.
+
+A chat-surface session usually can't continue straight into `/research-gate`, so it ends with
+the durable handback (§ Handback below) instead of a same-session paste.
+
 ## Project Glossary
 
 If your project maintains a domain glossary (a file that pins down what overloaded terms mean — shared identifiers, record types, process names, status codes, etc.), read it before the first question. Grilling on a codebase fails when the agent re-learns jargon every session or quietly conflates two meanings of one word.
@@ -142,7 +156,37 @@ Produce an **Intent Summary**:
 **Risks**: [key edge cases or unknowns]
 ```
 
-Do not act on it until the user confirms you have reached a shared understanding. The summary is the input to `/research-gate` Phase 1 — paste it directly into the feature description.
+Do not act on it until the user confirms you have reached a shared understanding.
+
+## Handback — where the Intent Summary lives
+
+The summary is the input to `/research-gate`, and it must survive the session that produced it.
+Two flows:
+
+- **Same-session** (continuing straight into `/research-gate`): paste it directly into the
+  feature description. If your project wants a durable record too, also write it to a tracked
+  file (e.g. `docs/intents/<slug>.md`) in the same commit as the feature.
+- **Remote / chat-surface session** (can't continue into the gate itself): write the summary to
+  a tracked file, commit that one file on a dedicated branch (e.g. `intent/<slug>`), push it, and
+  tell the operator the branch name. Touch nothing else — no PR, no merge. A later session (or
+  `/research-gate` itself) picks it up from there.
+
+If you adopt the file-based form, a simple frontmatter block keeps the lifecycle visible:
+
+```yaml
+---
+status: decided          # or: proposed (queued for grilling, not yet a feature description)
+                          #     consumed (flipped by the session that acted on it)
+date: YYYY-MM-DD
+source: phone-grill       # or desktop-grill | remote-grill
+---
+```
+
+`proposed` matters because a queued idea pushed to the branch before any grilling happened is
+NOT a feature description yet — grill it first, replace the body with the real Intent Summary,
+and flip to `decided` before anything downstream may consume it. The session that acts on a
+`decided` doc flips it to `consumed` in the commit that starts the work, and deletes the branch
+once that work lands on the trunk.
 
 Before producing the summary, confirm any glossary additions or edits the session produced are written — the Intent Summary should use the glossary's terms verbatim.
 

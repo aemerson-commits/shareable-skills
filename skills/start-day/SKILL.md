@@ -289,6 +289,13 @@ checklist exists to carry gets buried under its own history.
 
 Keep it to the top few per bucket; the full board lives in whatever project-tracking view you use.
 
+**A verifier's exit code can encode more than pass/fail.** Some status-check scripts exit
+non-zero to mean "items remain that need a person," not "the check itself failed" — that's a
+healthy, expected signal on a day the queue isn't empty, not an error. Before reporting a
+non-zero exit as a problem, read what the script actually printed (its counts, its category
+labels) rather than trusting the raw code — a run that did exactly its job, including on a day
+it also fixed something, can look identical to a broken one if you only look at the number.
+
 ### Step 9 — Friday Wisdom Check
 
 Check if today is Friday:
@@ -343,3 +350,10 @@ What are you working on today?
 - **Don't overwhelm**: Keep the briefing scannable. Details on request
 - **Surface blockers first**: If there's interrupted work or critical alerts, lead with those
 - **Ideas triage is optional**: Ask before running — user may want to defer
+- **Silence-by-design needs its own staleness escalation**: several steps above deliberately
+  print nothing on the common case, so a routine "all clear" morning doesn't train the reader
+  to skip the briefing — but that intentional quiet looks identical whether nothing changed or
+  the underlying data source stopped updating. Any step that depends on an external event that
+  can simply stop arriving (an export, a sync, a feed) should carry its own "this has been
+  quiet too long" threshold, independent of whatever it normally reports, so a dead source
+  doesn't hide behind the design that keeps a healthy one quiet.

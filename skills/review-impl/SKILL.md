@@ -66,6 +66,41 @@ When it does run, dispatch 3 context-gathering agents simultaneously (sonnet —
 
 All 3 agents report back. Main agent compiles context package for Phase 2 reviewers.
 
+### Phase 1b: Probe the worktree (when the work came from an agent)
+
+Reading a diff tells you what changed, not whether it's right. When the implementer was a
+worktree-isolated agent — especially on data transformation, identity/keying, or SQL — do this
+before Phase 2 dispatches anyone.
+
+**Fix the base first.** Read the agent's actual base commit from its own log, not from your idea
+of the integration branch's tip — a worktree branched from an older commit makes every
+intervening commit since that base read as the agent's own work. Diff before against after:
+
+```bash
+git -C "$WORKTREE" show <base-sha>:path/to/file.js > "$SCRATCHPAD/before.js"
+sed -n '400,500p' "$WORKTREE/path/to/file.js"          # the after
+```
+
+**Then write probes that each answer one behavioral question.** Put them in a scratch dir —
+*not* the worktree — so the agent's tree stays exactly as it will merge. Each probe answers one
+sentence: "does the new keying function handle non-numeric input?", "does the reimport path
+preserve existing rows?"
+
+**Mutate what the agent's tests claim to pin.** A green suite is not evidence the tests
+constrain the behavior they claim to test. Copy the module aside, break the specific behavior a
+test names, re-run, confirm it goes red. A test that stays green under mutation is not coverage.
+
+**Verify build/test/lint in the worktree yourself.** A result the agent *reported* is not one
+you observed:
+
+```bash
+cd "$WORKTREE/project" && npm run build > "$SCRATCHPAD/build.txt" 2>&1; echo "EXIT=$?"
+npx vitest run <the agent's tests> > "$SCRATCHPAD/test.txt" 2>&1; echo "EXIT=$?"
+```
+
+Only then move to Phase 2, and only then run a worktree merge-safety pass before copying files
+out of the worktree.
+
 ### Phase 2: Dispatch Reviewers (parallel)
 
 Launch three agents simultaneously (all model: "opus"). Full prompt text for each agent is in [references/review-checklists.md](references/review-checklists.md).

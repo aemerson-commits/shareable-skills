@@ -41,6 +41,14 @@ the branch it's headed for, so `git show <remote>/<branch>:<path>` reports "not 
 that's nearly done. Check both — the file tree and open PRs — and if the team ships from more
 than one repo, check every repo the feature could land in, not just the one you're sitting in.
 
+**Also check for a decided Intent Summary**, if your project uses `/grill-me`'s handback
+convention — a grill session (in particular a remote or chat-surface one, which can't continue
+straight into this gate) may have already settled intent and pushed it to a durable file/branch.
+A decided intent doc matching this feature IS the feature description — use it verbatim and
+don't re-ask the decisions it records; they're the user's answers, already given. When the gate
+clears and work starts, fold the intent doc's branch into the feature branch and mark it
+consumed in that same commit (see `/grill-me` § Handback for the exact mechanics).
+
 ### Phase 1: Constraint Discovery — Parallel Research (3-5 min)
 
 Dispatch 4-5 research agents simultaneously (all model: "opus"):

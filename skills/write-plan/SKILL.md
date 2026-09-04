@@ -16,11 +16,17 @@ Create a structured implementation plan that can be executed by subagents or fol
 
 - `/research-gate` should have run first (constraints and approach already decided)
 - If not, ask: "Should I run /research-gate first, or do you already know the approach?"
+- A decided intent doc (see `/grill-me` § Handback) supplies the WHAT — cite it in the plan
+  **Goal** and don't re-ask the decisions it records; research-gate still supplies the HOW.
 
 ## Step 0 — Check for in-flight overlap (before writing a single task)
 
 Check open PRs/branches for work that already covers what you're about to plan — narrow the
 task onto the existing PR or drop it, rather than write a second implementation.
+
+**Intent docs are in-flight input too**, if your project uses `/grill-me`'s handback convention:
+a decided intent doc for this feature carries the user's already-given answers — the plan's
+Goal cites it instead of re-deriving intent.
 
 **Checking the trunk branch for the files you'd create is not this check.** A branch that
 hasn't merged yet has none of its files on the trunk, so a file-existence check reports "nothing
@@ -171,6 +177,11 @@ marked met by hand once actually verified.
   `EXPECT:` matched against unconditional output, is a green gate that proves nothing — test
   every check against a deliberately broken version of the thing it's checking before trusting
   it.
+- **A `CHECK:` must name a command that exists when the gate is claimed.** A lint that validates
+  the ledger's shape can't tell whether the binary or path actually resolves, so a phantom
+  `CHECK:` passes format validation and then fails — or worse, is never run — at claim time. If
+  the plan's own work creates the test, say so in the gate body and leave `EVIDENCE: pending`;
+  don't invent a script name and hope it exists later.
 - **Never let the check accept a hand-supplied number as its own proof.** Make it measure the
   figure from the real source and apply the acceptance rule itself; a check seeded with
   invented inputs can only confirm the hypothesis that produced it.

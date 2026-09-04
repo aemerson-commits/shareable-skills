@@ -1,6 +1,6 @@
 ---
 name: pre-merge-review
-description: "Comprehensive pre-merge review — security pentesting, performance, scalability, UX consistency, and code hardening. Run before merging dev to main to catch issues before production. Triggers: 'pre-merge review', 'review before merge', 'full code review for merge'. Soft-default: when planning a commit or merge that touches 3+ top-level projects, suggest running this skill before pushing — the cross-project blast radius warrants a review even if no individual change looks risky."
+description: "Comprehensive pre-merge review — security pentesting, performance, scalability, UX consistency, and code hardening — then works the findings through to landed fixes on a branch. Run before merging dev to main to catch issues before production. The deliverable is a merge-ready branch, not a findings list: after synthesis the skill verifies each finding, triages apply/flag/outward-facing, fixes on a branch cut from the reviewed SHA with a regression test that fails on the unfixed code, and re-runs the full pre-flight. Triggers: 'pre-merge review', 'review before merge', 'full code review for merge', 'fix the review findings'. Soft-default: when planning a commit or merge that touches 3+ top-level projects, suggest running this skill before pushing — the cross-project blast radius warrants a review even if no individual change looks risky."
 ---
 
 # Pre-Merge Review
@@ -70,6 +70,13 @@ Simulate three attacker profiles against all exposed surfaces:
 - Headers on all responses — security headers present
 - **Scaffolding/diagnostic routes MUST be removed before commit** — temporary endpoints added mid-session to introspect data (e.g. `/_tables`, `/_schema/:table`, `/debug/*`, `/_probe-*`) get shipped by mistake when they should be deleted once they've served their purpose. Grep the diff for routes prefixed with `_`, `debug`, `probe`, or commented as "temporary" / "diagnostic" / "scaffolding" — every match is a removal candidate. If genuinely needed long-term, gate with the same auth as existing analogous routes.
 - **The deploy targets, not just the diff.** Every repo-side secret scanner — grep-based scanners, pre-push hooks, hosted secret scanning — is repo-scoped, so a script that was never `git add`ed is invisible to all of them at once, even with no `.gitignore` line naming it as sensitive. If your project deploys to something outside git (a VM, a network share, a bare-metal host), scan that target directly for credential literals, and separately list **target-only files** — present on the target, absent from git — the blind spot where literals accumulate unreviewed. A real incident: several untracked scripts on a production file share each carried a hardcoded database password, one byte-identical to the live credential the running service authenticates with, sitting in plaintext for months. A clean `git diff` says nothing about this class. Treat "target unreachable" as "the check did not run," never as a pass.
+- **Entropy/pattern-based secret scanners must cover base64url and UUID shapes, and be tuned
+  against the codebase's own conventions before shipping the wider rule.** A base64 detector
+  class that misses `-`/`_` won't catch what `randomBytes().toString('base64url')` emits, and
+  most scanners have no UUID rule at all. But widening the character class naively will
+  false-flag ordinary text conventions (a bolded key-style marker, a slug, a hex ID in a doc).
+  Widen the class, then qualify candidates (mixed case + digit + separator), and pin negative
+  controls from real lines already in your own docs/notes before trusting the wider rule.
 - **Never write a credential literal into a maintenance or throwaway script, not even temporarily.** Resolve credentials through a shared helper — env var, then a local `.env`, then wherever the running service's own deploy-time config actually lives — and have it exit non-zero rather than silently falling back to something embedded. Prefer no credential at all when a read-only path (an existing proxy, a health/schema endpoint) already serves the same data without one.
 - **Rotation has a coupled blast radius.** If a scratch script's hardcoded credential matches the value the production service authenticates with, rotating one without the other breaks the service. Check what else shares a credential before rotating it.
 
@@ -270,6 +277,68 @@ Spawns 2 sub-agents:
 
 Total agent capacity: up to 12 agents working simultaneously across the 5 domains.
 
+## Fix Application (run after synthesis — the review is not done until this completes)
+
+A ranked findings list is not the deliverable; a merge-ready branch is. After synthesis, work
+the findings through to landed fixes — don't stop at the report and ask whether to proceed.
+
+### Step 1 — Verify every finding before fixing it
+
+A domain agent's finding is a hypothesis until you reproduce it yourself, in your own turn.
+Fixing an unverified finding is how a review injects a bug. Three real ways a finding turned out
+wrong before a fix was ever written:
+
+- **A stale premise.** An open PR claimed a lint gate failed at the branch's current tip;
+  re-running the check at the actual tip showed a later commit had already fixed it — merging
+  the PR would have re-landed dead work and conflicted with the real fix.
+- **A wrong vantage point.** A verification script run from the wrong checkout (an unrelated
+  branch) reported a value missing that was, in fact, present when the same script ran from a
+  worktree pinned to the reviewed SHA.
+- **A right conclusion, wrong reason.** A live probe returned an error code read as "this route
+  is protected by a missing secret" — the real cause was that the route hadn't been deployed to
+  that target yet. Same verdict, different post-merge consequence.
+
+For each finding, state the basis inline: *reproduced* / *read the code* / *agent-reported,
+unverified*. Never fix on the third.
+
+### Step 2 — Triage into three buckets
+
+| Bucket | Criteria | Action |
+|---|---|---|
+| **Apply now** | Blocking (CRITICAL/HIGH), or a small well-understood MEDIUM/LOW with a local fix and no product judgement | Fix in this phase |
+| **Flag, don't apply** | Needs a product decision, a schema/API change, a perf rewrite, or widens scope beyond the release | Report with the recommendation; do not implement |
+| **Outward-facing** | Closing someone else's PR, deploying, deleting a branch, notifying a person | Recommend only — these need explicit approval even inside an approved fix phase |
+
+A finding whose fix contradicts an explicit in-code rationale goes to **flag**, never **apply** —
+surface the contradiction instead of overriding it (see the fix-batch rationale rule under
+§ Refactor, Sweep & Fix-Batch Discipline below).
+
+### Step 3 — Fix on a branch cut from the reviewed HEAD
+
+Never edit the shared/main checkout directly — cut a branch from the exact reviewed SHA so
+fixes sit on the code that was actually reviewed, not on whatever the base branch has drifted to
+since:
+
+```bash
+git checkout -B pmr-fixes-<date> <reviewed-HEAD-sha>
+```
+
+Re-check the base branch before landing — it can move mid-review.
+
+### Step 4 — Regression tests, gate re-runs, full pre-flight
+
+Apply § Test-Validity Checks (accept-side test, event-bubbling trap) to every fix's regression
+test, § Convention Audits' "wire it into CI" rule to any finding that slipped past an existing
+gate, and § Refactor, Sweep & Fix-Batch Discipline's re-review rule after the batch lands —
+fixes regress just like features do, and the review isn't done until the fix branch passes the
+same pre-flight the original diff did.
+
+### Step 5 — Report what was applied vs held
+
+Close with a table: finding → applied/held → commit or reason. State plainly which findings you
+are NOT fixing and why. Then hand back the merge decision — the fix phase makes the branch
+merge-ready; it does not authorize the merge.
+
 ## Post-Review
 
 After executing fixes:
@@ -340,6 +409,8 @@ Review the *tests* in the diff with the same suspicion as the code:
 - Backend body parser needs explicit size limits — default may be too low or undocumented
 - Auth middleware that is a no-op (e.g. `next()` with no check) — always verify middleware actually validates
 - **Scaffolding/diagnostic routes MUST be removed before commit** — routes prefixed with `_`, `debug`, `probe`, or commented as "temporary" are removal candidates
+- **When a capacity/availability guard gains a new cost or adjustment term, sweep every OTHER surface that computes the same quantity for resolution or what-if purposes.** A guard that blocks an over-limit action and a "resolve/what-if" view that proposes filling the same capacity must share the same basis — otherwise the view a guard would reject gets actively proposed by the tool meant to resolve the guard's own complaint. Grep every caller of the shared aggregator function and demand the same adjustment term, or a comment saying why not.
+- **An auth fence added inside one code branch must be proven on the OTHER branches too — especially the default/fallback path.** A fence covering only one conditional branch can leave the default path wide open while a nearby comment asserts the opposite. For any `if (someCondition) { authCheck }` in a diff, trace the else/fall-through with the same attacker credential — a single live read-only probe (expect a rejection, not a 200) often settles it.
 
 ### UX Consistency (Recurring)
 - Chart components MUST use shared tooltip constants — bare tooltip props accumulate

@@ -60,6 +60,39 @@ A repo-local scratch dir is also exposed to `git add -A` sweeping a leftover pat
 unrelated commit. Gitignore the directory you use for these, and prefer an explicit pathspec
 `git add <files>` over `-A` on any commit made while a patch script is still on disk.
 
+### Grounding a claim — adversarial scripts and probe tests
+
+A repro built from inputs you invented cannot falsify your hypothesis — it can only confirm it.
+This is the mechanism for obeying that rule: one short script per claim, written to *disprove*
+that claim, run against the real source.
+
+**Two surfaces. Pick by what the claim is about.**
+
+| The claim is about | Write | Where |
+|---|---|---|
+| Live external data (a database, a third-party API, a production system) | a standalone `.mjs` | the scratchpad — or a gitignored repo-local scratch dir when it needs a repo-relative path or a bare import |
+| Behavior of a project module (an algorithm, a keying/parsing function, a transform) | a disposable `_probe-*.test.js` | the project's own test directory — it needs the project's own module-resolution config to import the module |
+
+**Name the script after the claim it attacks, not the subject.** `refute-x.mjs`,
+`critic-1.mjs` … `critic-N.mjs` — one per claim in a plan or decision doc. The name is the
+record of what you tried to break; `check-data.mjs` records nothing.
+
+```bash
+# standalone form — parse-gate, then run against the real source
+node --check /tmp/refute-x.mjs && node --env-file=.env /tmp/refute-x.mjs > /tmp/refute-x.log 2>&1; echo "EXIT=$?"
+
+# probe-test form — runs inside the project so imports resolve
+cd project && npx vitest run src/test/_probe-today-clamp.test.js > /tmp/probe-today-clamp.log 2>&1; echo "EXIT=$?"
+```
+
+**A probe test is disposable and must be deleted.** Prefix `_probe-` so the set is visually
+distinct and batch-removable — `rm -f project/src/test/_probe-*.test.js` when the investigation
+closes. Leaving one behind ships an unreviewed test into the codebase.
+
+**Gate the document on the scripts, not the other way round.** When the claims live in a plan or
+decision doc, commit the doc only after every claim has had a script aimed at it and survived. A
+claim no script attacked is a hypothesis — write it as one rather than asserting it.
+
 ### The bare-import trap
 
 `node_modules` lives in the **repo**. A script written to an OS scratchpad resolves bare
@@ -234,5 +267,5 @@ For simple endpoint checks, prefer `curl` directly over a script — it's one li
 - **Hardcoded secrets** — defeats the point of an env loader. Always `process.env.*`.
 - **CommonJS `require()`** — modern Node is ESM-friendly. Use `import` + `.mjs` extension.
 - **Skipping the noise filter** — `.env` loaders are loud. Pipe through `grep -v "Loading\|injected\|suppress"` (or your loader's silent flag) so real output stands out.
-- **`/tmp/` on Windows without thought** — Git Bash translates it to the user's AppData Temp. Use explicit `C:/tmp/` paths in both the Bash invocation and the script itself.
+- **`/tmp/` on Windows without thought** — Git Bash's `/tmp` and Node's `C:\tmp` are DIFFERENT directories: a script that writes a file via one and is read via the other fails with ENOENT. Pick one path convention and use it consistently in both the Bash invocation and the script itself — the scratchpad by default, or one explicit `C:/tmp/` path when something outside the session must read the file.
 - **Running scripts without `--env-file` or a loader** — symptoms look like "API returned 401 / no token" but the real cause is `.env` never loaded.
