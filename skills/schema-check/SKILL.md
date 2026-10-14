@@ -70,6 +70,9 @@ Before writing a query, verify:
 - [ ] Required NOT NULL columns have values on INSERT
 - [ ] Foreign keys reference valid tables
 - [ ] Index exists for WHERE clause columns (for performance)
+- [ ] A column you will `ON CONFLICT(col)` on is the key of a real unique index: join `pragma_index_list` to `pragma_index_info`, compare the full key list, and filter on `unique = 1`. Don't grep the CREATE TABLE (an implicit `PRIMARY KEY` index has no DDL of its own), don't filter on `origin IN ('pk','u')` (a standalone `CREATE UNIQUE INDEX` has origin `'c'` and does satisfy ON CONFLICT), and don't accept *any* unique index over a different column. SQLite otherwise rejects the upsert at runtime.
+- [ ] Index assertions compare the exact key list and predicate: `CREATE [UNIQUE] INDEX IF NOT EXISTS` is a no-op against a same-named index, so a remote database silently keeps its old predicate and uniqueness.
+- [ ] Never assert an allowed state value with `ddl.includes("'x'")`: `DEFAULT 'x'` puts the literal in the DDL by itself, so a wrong CHECK list still passes. Parse the CHECK's IN-list.
 
 ### 5. Migration Check
 
@@ -82,16 +85,7 @@ ls <project>/migrations/ | grep -i "<keyword>"
 
 Cross-reference any read-time enrichment layer — it may add columns or filter rows in ways the raw table schema doesn't show.
 
-Before creating a new migration:
-```bash
-# List existing migrations
-ls <project>/migrations/
-
-# Check latest migration number
-ls <project>/migrations/ | tail -1
-```
-
-New migration should be numbered sequentially (e.g., `0018_*.sql` after `0017_*.sql`).
+Before creating a new migration, pick the number from more than the local tree: `ls <project>/migrations/ | tail -1` misses a number already claimed on another remote branch or open PR, or applied in the `d1_migrations` tracker. Check all three, number sequentially (`0018_*.sql` after `0017_*.sql`), and re-check just before you push, since a number verified at authoring time can be taken by then.
 
 **Applying a migration manually (when CI auto-apply won't run or is gated):**
 
@@ -159,6 +153,11 @@ not provide.
 
 Verify the binding rather than trusting the name: read the deploy config for which database
 ID each environment binds, and which branch the deploy actually targets.
+
+**Once dev and prod are genuinely split, the rehearsal is real but limited:**
+- A dev apply proves the DDL runs, not that production's current data satisfies it, especially if dev is rebuilt from a periodic copy of prod and can lag it.
+- Each target has its own applied-migrations tracker, so they legitimately diverge until release. A destructive migration (DROP, or an unfiltered UPDATE/DELETE) that was reviewed and hand-applied on dev is not in production's tracker, so a destructive-migration guard on the release will flag it and stay red. After the same live-data review, apply it to production deliberately, from the project directory with its own config (a repo-root-relative command can find no migrations, apply nothing, and report production caught up), then re-run the release's apply step.
+- A split database does not split other bindings (KV, R2, access policy, outbound email). Check what is still shared before assuming a dev test is isolated.
 
 ## Production Write Operations — One-Off Fix vs Repeatable Backfill
 

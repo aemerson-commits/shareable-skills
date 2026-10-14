@@ -1,6 +1,6 @@
 ---
 name: session-notes
-description: "End-of-session notes. Two modes — cheap `checkpoint` for mid-day, full close-out at true end of day. Triggers: 'close out', 'wrap up', 'done for the day', 'checkpoint'. NOT for reading past notes."
+description: "End-of-session notes. Two modes — cheap `checkpoint`, the default and the only mode Claude may pick; the full close-out ONLY on explicit request (the clock is not a signal). Triggers: 'close out', 'wrap up', 'done for the day', 'checkpoint'. NOT for reading past notes."
 ---
 
 # Session Notes — Obsidian Vault Update
@@ -71,12 +71,16 @@ Append one compact block to today's session note. **Do not** touch Roadmap, proj
 frontmatter, memory, help content, or the skill tracker.
 
 ```bash
-"$OBS" append path="{{project}}/Sessions/{YYYY-MM-DD}.md" content="\n### {HH:MM} — {topic}\n\n- {what landed}\n- Left off: {state}\n" 2>&1 | grep -v "Loading\|out of date"
+"$OBS" append path="{{project}}/Sessions/{YYYY-MM-DD}.md" content="\n### {HH:MM} — {topic} (session {id8}, {host})\n\n- {what landed}\n- Left off: {state}\n" 2>&1 | grep -v "Loading\|out of date"
 ```
 
 Write any `Learnings` bullets in the routed shape now (see § Session Learning Protocol) so an
 end-of-day ingest — yours or a script's — can pick them up. That's what makes checkpointing
 safe to keep cheap: the raw material for the full close-out is already captured as you go.
+
+End each block's heading with `(session {id8}, {host})`: the first 8 characters of the session id and the output of `hostname`. When several machines write one note, an hourly auto-backup commit sweeps every session's lines into one, and neither fact is recoverable from the log afterward. The full close-out's `## Session N` block carries the same suffix.
+
+**An auto-sync or backup commit can delete the note you are writing** (a concurrent clone with a stale view of the file gets committed over the current one). Treat an append as unconfirmed until you have re-read the note and seen your block. If it vanished, `git log --oneline --diff-filter=D -- "<note path>"` names the deleting commit and `git show <sha>^:"<note path>"` recovers the pre-deletion text. Re-append from that, never from memory; a retyped note is stale-memory carry-forward waiting to happen.
 
 Then stop. Report one line. This is a complete, correct outcome — not a partial close-out.
 
@@ -92,8 +96,10 @@ can be sitting in an unresolved merge, and an edit against it either fails to ma
 expected text or writes around the markers and silently corrupts the file.
 
 ```bash
-grep -c '<<<<<<<' "$FILE"      # 0 = safe to edit
+grep -cE '^(<{7}|={7}|>{7})( |$)' "$FILE"      # 0 = safe to edit
 ```
+
+The pattern is anchored on purpose: a marker only counts at the start of a line. Session notes quote the marker in prose, and an unanchored `grep -c '<<<<<<<'` counts those quotes as conflicts.
 
 Non-zero: resolve before editing — don't edit around it.
 
@@ -227,7 +233,19 @@ write it as a gotcha — a real process friction will recur and get a second cha
    why a checkpoint should write learnings in the routed shape immediately (Mode A above),
    rather than deferring them to a from-memory reconstruction at full close-out.
 
+   An ingest like this should be fail-closed, so a bullet that deviates (bold around the key, a `KEY:` prefix) ingests nothing and is only reported as declined. Copy the shape from this skill's template, never from a peer's block in the note: a malformed form copied block to block can get a whole day's learnings declined.
+
 **Architecture decisions**: Prioritize critical thinking and scalable architecture over speed. Ask high-level questions to build a framework. When a function/feature has changed scope, point it out and ask if the architecture should change.
+
+## Unattended (headless) close-out
+
+If a scheduler runs the full close-out with nobody watching, the rules change:
+
+- **A dry-run must gate every OUTBOUND side effect, not only repo writes.** "Write no artifact, commit nothing, push nothing" are all repo-write verbs. If the run's output is a questions file and the runner's re-ask path delivers it, a dry-run still pages real people. In dry-run the questions are an artifact to read; if you cannot tell whether a step delivers, treat it as delivering and leave it undone.
+- **Never guess a judgment call.** Leave the artifact unchanged and queue a plain two-answer question (a gate advance, an audience decision, whether an item is safe to run unattended). Feed answers back through the next run's prompt, and let the run mark a question obsolete if the repo already settles it.
+- **Coverage is the window since the last successful run, not the calendar day.** Only a clean live run advances the watermark, so a failed run leaves the gap for the next one.
+- **Land the bookkeeping where the next reader looks.** Close-out writes that stay in the launching checkout are invisible to the nightly jobs that consume them; commit them from a throwaway worktree on a fresh remote head, and cut that worktree inside the repo so pre-push hooks can resolve dependencies.
+- **Never touch the notes vault's git state in a dry-run**, not even a fetch; read files, `git log` and `git show` only.
 
 ## Relationship to the Feature-Ship Checklist
 

@@ -185,6 +185,28 @@ marked met by hand once actually verified.
 - **Never let the check accept a hand-supplied number as its own proof.** Make it measure the
   figure from the real source and apply the acceptance rule itself; a check seeded with
   invented inputs can only confirm the hypothesis that produced it.
+- **Existing is not runnable.** A `CHECK:` can name a command that exists and still never run. Two causes:
+  the checker runs from a different working directory than the plan (a root-relative path, or a `cd pkg && ...`
+  prefix, resolves nowhere from the ledger's own folder, so pass an explicit cwd or set one per gate); and the
+  wrong runner (a gate that invoked one test framework against a package tested with another, with an `EXPECT:`
+  string only the first framework prints). Match `EXPECT:` to the wording of the runner you actually ran. A
+  "no tests found" red reads as "nothing to do", so treat it as a broken gate.
+- **Assert the specific token, never a generic failure flag.** If a gate needs a refusal with a particular error
+  code, matching any 4xx with `rejected: true` lets a different validation layer's refusal print a pass without
+  the fence under test ever being reached.
+- **Match the prose, not the file.** Search the user-facing text, not a file that also carries a `keywords`
+  array repeating the same terms: the gate stays green after the prose is renamed away.
+- **The same command in two artifacts is two commands.** A plan's `Verify:` line and the ledger's `CHECK:` are
+  separate copies; fixing one leaves the other broken. Grep the command shape repo-wide, not just the file you
+  were editing.
+- **Negative-test your own oracle before trusting a green.** Mutate the thing it should detect (rename the term,
+  zero the field, delete the entry) and confirm it fails, for the stated reason. If the mutation still passes,
+  find which layer is vacuous before repairing anything: the assertion (checks a type, not a value), the mock
+  (bypasses the mutated path), the runner (never collected the test), or the fixture. The fixture hides best:
+  a text column sorts `'9' > '12'`, yet every fixture under 10 rows passes under both the broken and the correct
+  query, so pick data that crosses the boundary the bug lives on.
+- **Confirm what a green was measured on.** "94/94 = 100%" over a population containing none of the job under
+  test was evidence about the query, not the system.
 - **One gate per independently omittable outcome.** If half a gate could ship without the other
   half, split it into two.
 - **When a gate turns out to be impossible, don't delete it** — mark it abandoned with the

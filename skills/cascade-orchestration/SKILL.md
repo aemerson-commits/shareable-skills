@@ -5,7 +5,7 @@ description: "Reusable agent team cascade patterns — parallel dispatch, sequen
 
 # Cascade Orchestration Patterns
 
-Reusable patterns for orchestrating agent teams across projects. All agents use model: "opus" with max effort.
+Reusable patterns for orchestrating agent teams across projects. Every dispatch carries an explicit `model:` — your cheapest capable model is the default and the floor; escalate only for critical review, security audits, architecture and migration gates (see `/model-selection`). Route effort per task, never max it globally.
 
 ## Pattern 1: Fan-Out / Fan-In
 

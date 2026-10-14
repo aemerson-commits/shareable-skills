@@ -130,6 +130,8 @@ to confirm it reproduces; discard any that do not.
 Report ONLY confirmed stale references (files that don't exist, IDs not in config).
 ```
 
+> **A `/name` pointer is not necessarily a repo path: resolve it against the global commands tree too.** Docs cite user-level slash commands the same way they cite skills, and those live in the tree Check 8 resolves (`$GLOBAL/commands/<name>.md`), not in `.claude/skills/`. An agent scoped to the repo sees no directory and reports a dangling pointer with airtight-looking evidence. Before reporting a `/name` stale, `ls "$GLOBAL"/commands/<name>.md`. A pointer that resolves ONLY in the global tree is a dependency on an unversioned surface, which is worth saying, but it is not a stale reference. The same goes for a pointer that names another repo: do not resolve it against the local tree.
+
 **Pass criteria**: Zero stale file paths or config IDs.
 
 ### Check 2: Negative Output (Safety Guards)
@@ -234,7 +236,9 @@ If some skills in this tree are synced OUT to another consumer — an agent flee
 - **Attachment is the failure that matters, not sync freshness.** A skill successfully synced but attached to nothing on the remote side teaches nobody while looking healthy from this audit. If you have a signal script or dashboard for the remote system, use it to check per-skill attachment counts and flag any repo-sourced skill sitting at zero.
 - **A partial-adoption skill is also a failure, not just a zero.** If one skill in the tree carries a duty that only matters when every consumer has it (e.g. an "always log a lesson" skill), a consumer missing it contributes nothing, and the symptom is a quiet, well-behaved-looking gap — not an error. Compare its attachment count against the number of consumers that should carry it, not against zero.
 
-**Pass criteria**: every externally-synced skill has its export-description key set (if your sync uses one), none is attached to zero remote consumers, and any must-have-everywhere skill is attached to every consumer that should carry it.
+- **An unreachable signal source is a degrade, not a measurement.** If the signal script cannot reach the remote system (missing credential, network), it may exit non-zero yet still emit a well-formed object with empty arrays. Read as data, "no skills attached anywhere" is exactly the failure this check hunts, manufactured out of a connection error. Check the exit code and any `warnings` field before reading a count; on a non-zero exit, report the export-key half, say the attachment half could not be measured, and quote the warning.
+
+**Pass criteria**: every externally-synced skill has its export-description key set (if your sync uses one); and, when the signal source was reachable, none is attached to zero remote consumers and any must-have-everywhere skill is attached to every consumer that should carry it. An unreachable source makes the attachment clauses N/A, not PASS.
 
 ### Check 8: Unaudited Extension Surfaces
 
@@ -256,9 +260,14 @@ echo "repo skills:     $(ls -d .claude/skills/*/ 2>/dev/null | wc -l)"
 echo "global skills:   $(ls -d "$GLOBAL"/skills/*/ 2>/dev/null | wc -l)"
 echo "global commands: $(ls "$GLOBAL"/commands/*.md 2>/dev/null | wc -l)"
 
-# name collisions between the repo tree and either global tree
+# name collisions between the repo tree and either global tree.
+# Depth-searched, NOT a depth-1 glob: a platform-managed tree may nest skills
+# (skills/synced/<bucket>/<name>/), so `skills/*/` sees the container, never the skills.
+# `find -L` with the TRAILING SLASH is required: skills/ may itself be a symlink, and a
+# bare `find "$GLOBAL"/skills` returns only the link (zero collisions, which reads as clean).
 { ls -d .claude/skills/*/ 2>/dev/null | xargs -r -n1 basename
-  ls -d "$GLOBAL"/skills/*/ 2>/dev/null | xargs -r -n1 basename
+  find -L "$GLOBAL"/skills/ -mindepth 1 -maxdepth 3 -type d -exec test -f '{}/SKILL.md' \; -print 2>/dev/null \
+    | xargs -r -n1 basename
   ls "$GLOBAL"/commands/*.md 2>/dev/null | xargs -r -n1 basename | sed 's/\.md$//'
 } | sort | uniq -d
 
@@ -272,7 +281,11 @@ REAL=$(readlink -f "$GLOBAL/skills" 2>/dev/null)
 CLONE=$(dirname "$REAL" 2>/dev/null)
 if [ -n "$CLONE" ] && [ -d "$CLONE/.git" ]; then
   echo "global clone: $CLONE"
-  DIRTY=$(git -C "$CLONE" status --porcelain | wc -l)
+  # Tracked changes only: a platform sync that rewrites untracked content on every tick would
+  # otherwise produce a permanent "1 uncommitted change" nobody can clear.
+  UNTRACKED=$(git -C "$CLONE" status --porcelain --untracked-files=normal | grep -c '^??')
+  [ "$UNTRACKED" -ne 0 ] && echo "note: $UNTRACKED untracked path(s) - census only, not a finding"
+  DIRTY=$(git -C "$CLONE" status --porcelain --untracked-files=no | wc -l)
   [ "$DIRTY" -ne 0 ] && echo "FINDING: $DIRTY uncommitted change(s) in the global clone" \
                      || echo "global clone clean"
   git -C "$CLONE" fetch -q origin 2>/dev/null
@@ -293,6 +306,8 @@ For every name the collision command prints, diff the two bodies — a collision
 - **Report the census even when clean.** The counts are the point: a global tree holding skills and commands nothing else in this pipeline looks at is worth knowing about even at zero findings.
 - **Hardcoded user paths break portability silently.** A fully hardcoded absolute path under a user's home directory works on the machine that wrote it and breaks the moment the config is copied or synced to another machine — and most repo-level path lints don't reach into the unversioned global tree at all.
 - **If the global tree is a tracked clone, its drift state matters as much as its contents.** An uncommitted or stale clone means this machine's global config disagrees with every other machine using the same sync — not an "untraceable edit" problem, but a "silently out of sync" one.
+- **Find the SKILL.md, do not glob a depth.** Any tree that nests, buckets or versions its skills defeats a fixed-depth glob; keying on the file that makes a directory a skill does not. The failure is silent in the direction that reads as PASS (a nested tree reported "2 skills, zero collisions" while holding nine skills and several divergent collisions).
+- **A detector that pages on a sanctioned steady state trains its reader to ignore it.** Count tracked changes as the finding; report untracked platform-owned paths as census.
 - **Degrade quietly.** A missing global tree is a normal result, not a finding.
 
 **Pass criteria**: no divergent name collisions, no hardcoded user-home path in the global tree, and (if the global tree is a git clone) it's clean and up to date with its remote.
@@ -331,6 +346,10 @@ Audited `{branch}` @ `{sha}`, exact={yes|no} (per Preflight). If exact=no, state
 - **Consistency**: Flag contradictions — ask user which version is correct
 - **Efficiency**: Flag only — restructuring is manual
 - **Step compliance**: Flag only — behavioral, not a skill content issue
+
+## Completion stamp: write this on EVERY run, including a clean one
+
+Record completion (e.g. `aggregate.last_audit` = today, any pending-audit flag cleared) in your usage/state file. This is its own step, not part of Artifacts, because a clean audit writes no artifacts. If anything triggers a re-audit when the last audit is N days old, a stamp that only lands alongside artifacts makes every clean audit invisible to that trigger and re-runs an expensive audit on a tree audited hours ago. A clean run stamps and writes nothing else.
 
 ## Artifacts
 

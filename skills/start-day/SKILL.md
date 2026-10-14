@@ -114,6 +114,8 @@ Run any project-specific re-indexing in background — don't wait for it. For ex
 npx qmd update && npx qmd embed  # if using qmd for semantic search
 ```
 
+**Verify a backgrounded indexer can actually find its config.** A tool that reads `$HOME/.config/...` can no-op with exit 0 when the shell's `HOME` differs from the user's real home (Git Bash on Windows, a network home drive): it prints "No collections found" and indexes nothing. Backgrounding hides this completely, since nobody reads the output of a step designed not to be waited on, and the status command keeps answering from the stale index, so search looks healthy while it silently ages. Pin `HOME` to the directory that holds the config before the call, and run it once in the foreground when setting it up.
+
 ### Step 3 — Review Recent Session Notes (parallel, use Agent)
 
 Read the last 2-3 session notes from `{{project}}/Sessions/` (glob for `*.md`, pick most recent by date). Summarize:
@@ -133,7 +135,7 @@ whatever marker the full close-out leaves on the note (a frontmatter stamp, a da
 whatever your process uses). A day can end on checkpoints alone if the user never said an
 end-of-day phrase, which leaves the Roadmap, project status, memory, and help content behind
 for work that already shipped; a check that only looks for a missing note can't tell a
-checkpoint-only day from a properly closed one. If yesterday's note exists but carries no
+checkpoint-only day from a properly closed one. The marker must carry a VALUE: a hand-written blank placeholder (`closed_out:` with nothing after it) means NOT closed out. A check that only matches the key name reports every day closed and can never produce its own FAIL; match the key followed by non-whitespace. If yesterday's note exists but carries no
 close-out marker, surface it — *"yesterday ended on checkpoints — Roadmap/status/memory may be
 behind"* — and offer to run the full close-out for that date before starting new work.
 
@@ -209,7 +211,8 @@ npx wrangler d1 execute your-db --remote --command \
 ```
 
 **Surface in briefing:**
-- If no unresolved errors: report "Event Log: clear"
+- **Never report "Event Log: clear".** A status-filtered count of zero means nothing untriaged, not no errors. Always report the filtered count against the unfiltered one ("0 untriaged of N total"), and if the newest acknowledged rows cluster on one category, say so: an acknowledged cluster is still a live fault, it has just been seen before.
+- If no unresolved errors: report "Event Log: 0 untriaged of N total"
 - If errors exist: report count + top 3-5 as one-liners: `relativeTime · source · category · summary[:80]`
   - Group clusters (e.g. "5 of 8 are api-error from the same view" → suggest `/troubleshooting`)
   - Flag items >7 days old as stale or backlogged
@@ -257,6 +260,8 @@ new → in-progress → triaged, severity desc, newest first. Surface:
 
 If the project uses a gated project pipeline (e.g. Obsidian project notes with gate state), read the open notes and build three buckets:
 
+> **Before surfacing a blocked-on-you item, check the note's body against its status frontmatter; they drift.** A decision can be settled in the body (a ticked box, "decided by ...") while the frontmatter still describes it as open, and the briefing then re-asks the operator a question already closed. Grep the note for a settled marker before presenting anything as a decision you owe. Then fix the field that actually drives the bucket (the question block's answer or the gate checklist), not only the descriptive prose field, or the generated queue will raise it again next briefing.
+
 1. **Blocked on you** — projects at a gate requiring a human decision (e.g. threat assessment, signoff) OR any unanswered open question. These are the "Questions for Me" — the things only you can unblock. List each with its one-line question/decision. Lead the plan with this bucket.
    - **A PR's checks stuck at `action_required` belongs here too, not in the agent-ready queue.** Some CI platforms hold workflow runs for human approval whenever the PR was opened by a bot/automation account — the checks read as pending or red, but nothing is actually failing and no amount of agent effort clears it; only a person clicking "approve" does. Folding that state into an ordinary "failing" classification routes it to an agent with an unfixable instruction.
 2. **Agent-ready (today's unattended queue)** — projects flagged as unattended-runnable with no unanswered questions, at an active gate (research, scope, build, verify, visual). These are what an overnight agent skill or `/advance-gate` can drive forward without you. Order by priority then value.
@@ -303,7 +308,7 @@ Check if today is Friday:
 date +%u
 ```
 
-If the result is `5` (Friday) and the `/wisdom` skill is installed, **first check whether it already ran this week** — re-prompting after it already ran is noise. If `/wisdom` stamps a run-log or last-run marker on completion (e.g. `.claude/skills/wisdom/last-run.log`), check that (falling back to scanning this week's session notes for a mention if no marker exists). If it ran within the last 7 days, skip the prompt and add a one-line briefing note instead: "Wisdom: already run {date} this week — skipping the Friday prompt."
+If the result is `5` (Friday) and the `/wisdom` skill is installed, **first check whether it already ran this week** — re-prompting after it already ran is noise. If `/wisdom` stamps a run-log or last-run marker on completion (e.g. `.claude/skills/wisdom/last-run.log`), check that (falling back to scanning this week's session notes for a mention if no marker exists). The local marker only stamps runs made from this checkout. If wisdom also runs elsewhere (a scheduled or hosted lane that opens PRs), read that signal first (e.g. recent PRs on a `wisdom/<date>` branch), and treat a failed check as "check did not run", never as "no run". If it ran within the last 7 days, skip the prompt and add a one-line briefing note instead: "Wisdom: already run {date} this week — skipping the Friday prompt."
 
 Otherwise, after presenting the briefing, ask:
 
@@ -330,7 +335,7 @@ Good morning! Here's your daily briefing:
 **Active alerts**:
 - alert 1
 - alert 2
-**Event Log**: clear / N new errors+duplicates needing review (top 3-5 listed if >0)
+**Event Log**: N untriaged of M total (never "clear"; top 3-5 listed if untriaged >0)
 **Bugs**: none open / N open (X new · Y in progress · Z triaged) — top ~5, leading with SLA-overdue new + critical/high
 **Pipeline — blocked on you**: N — the questions/decisions only you can clear (top 3-5; "all clear" if none)
 **Pipeline — agent-ready today**: N — the pre-scoped unattended queue (top 3-5 by priority), ready for overnight agent or /advance-gate

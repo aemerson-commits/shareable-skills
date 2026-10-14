@@ -219,6 +219,13 @@ function ChartTooltip({ active, payload, label }, fmt = (v) => v) {
 - If using a ratcheted lint gate: existing charts are grandfathered; it fails only on a NEW
   multi-series chart that lacks a legend or color-aware tooltip.
 
+A lint that checks legend *presence* is satisfied by a bare `<Legend />`, so the check doesn't prove the legend is useful.
+
+**Reference legends (a key to a table, not a chart).** When a legend explains what the badges, marks or colours in a table mean, build it from one shared panel component rather than per-view markup:
+- Make the swatch the real component the table renders (or its real CSS class), so the key restyles itself when the table does. Deliberately offer no `items=[{color,label}]` data prop: a hand-written hex is a copy that silently drifts from the CSS it describes.
+- Group with an eyebrow label and a hairline, not nested bordered cards, which read as separate panels inside a collapsible.
+- Drive layout with one `auto-fit` column width, not a per-view column count, and persist open/closed state in storage with a safe fallback when storage throws.
+
 Additional chart patterns:
 - **Dark tooltips require THREE props**: `contentStyle`, `labelStyle`, `itemStyle`
 - **Bundle split**: Keep Recharts in `manualChunks` (vite.config.js)

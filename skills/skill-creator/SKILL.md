@@ -65,6 +65,7 @@ Based on the user interview, fill in these components:
 
 - **name**: Skill identifier
 - **description**: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All "when to use" info goes here, not in the body. Note: currently Claude has a tendency to "undertrigger" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit "pushy". So for instance, instead of "How to build a simple fast dashboard to display internal Anthropic data.", you might write "How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'"
+  **Keep it short, and set a hard byte budget (a few hundred bytes).** Every description is loaded into every session's system prompt, so its length is paid on every session start. "Pushy" means the literal trigger phrases and the "NOT for X, use /y" disambiguators go in the description; mechanism, agent counts, output formats and severity scales go in the body, which loads only when the skill runs. Enforce the budget with a lint if you can.
 - **compatibility**: Required tools, dependencies (optional, rarely needed)
 - **the rest of the skill :)**
 
@@ -394,6 +395,8 @@ Use the model ID from your system prompt (the one powering the current session) 
 While it runs, periodically tail the output to give the user updates on which iteration it's on and what the scores look like.
 
 This handles the full optimization loop automatically. It splits the eval set into 60% train and 40% held-out test, evaluates the current description (running each query 3 times to get a reliable trigger rate), then calls Claude with extended thinking to propose improvements based on what failed. It re-evaluates each new description on both train and test, iterating up to 5 times. When it's done, it opens an HTML report in the browser showing the results per iteration and returns JSON with `best_description` — selected by test score rather than train score to avoid overfitting.
+
+**A length budget is a hard constraint on the candidate set, not a tiebreaker.** The optimizer selects on trigger rate with no length term, so left alone its optimum drifts monotonically longer. Discard any candidate over budget (measure bytes, not characters) before scoring.
 
 ### How skill triggering works
 

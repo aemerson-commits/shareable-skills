@@ -69,6 +69,11 @@ After all agents report:
 2. Build and verify (don't just deploy and hope)
 3. If it doesn't work: move to hypothesis #2 (do NOT re-add logging for #1)
 
+#### When the failure is a CI run
+
+- **A re-run hides the attempt you were diagnosing.** `gh run view` serves the latest attempt, so once a flaky run is re-run and goes green it reports nothing failed. Before reading any log, pin the attempt: `gh run view <id> --json jobs,headSha,attempt`, then capture `--attempt 1 --log-failed` and `--attempt 2 --log` to files (`--log-failed` is empty on a passing attempt). The set difference of test names between the two captures is the flake. Redirect to files rather than piping into `tail`, which shows only the last job.
+- **An empty commit cannot unstick a path-filtered workflow.** No file matches the `paths:` filter, so it skips again. Dispatch the workflow manually on the branch instead.
+
 ### Phase 5: Learn
 
 1. Document what the actual root cause was

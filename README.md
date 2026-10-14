@@ -1,6 +1,6 @@
 # Shareable Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 51 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
+A complete development methodology built on parallel agent teams. 52 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
 ## Quick Start
 
@@ -41,6 +41,7 @@ When things go wrong:
 | `/grill-me` | Interrogate intent before building. One question at a time with recommended answers. | Conversation (no agents) |
 | `/research-gate` | Discover constraints before writing code. 4 parallel research agents. | 4 parallel |
 | `/write-plan` | Decompose into tasks with acceptance criteria ("Done When"). | Sequential |
+| `/premise-audit` | Verify a plan's claims about EXISTING code (paths, symbols, verbs, column types) before agents build on them; dimension sweeps, then one adversarial refuter per finding. | Parallel sweeps + 1 refuter per finding |
 | `/review-impl` | Adversarial review with weighted grading (A/B/C/F), 3 code reviewers + Playwright visual verification. | 3 parallel + 1 visual |
 | `/cascade-orchestration` | 5 reusable agent team patterns: Fan-Out/Fan-In, Sequential Pipeline, Per-Project Propagation, Cascading Sub-Teams, Conditional Dispatch. | Reference (no agents) |
 | `/debug-collaborate` | Multi-agent collaborative debugging — parallel hypothesis generation and testing. | 4 parallel |

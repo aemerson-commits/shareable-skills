@@ -43,6 +43,24 @@ npm run build > build.log 2>&1; echo "EXIT=$?"
 Verify by grepping the **target** for the post-condition, not by re-reading the script — the
 script running without throwing says nothing about whether it matched anything.
 
+**Declare an expected hit count per anchor, and write nothing unless every count matches.** Match into memory,
+compare each anchor's hits to the number you declared, and write the files only once the whole list agrees.
+
+```javascript
+// Read each file ONCE, then thread every edit through the ACCUMULATED text.
+const src = staged.get(file) ?? readFileSync(file, "utf8")   // NOT the pristine copy
+const hits = src.split(anchor).length - 1
+if (hits !== want) { console.error(`MISS ${file}: found ${hits}, want ${want}`); bad++; continue }
+staged.set(file, src.split(anchor).join(replacement))       // writeFileSync only if bad === 0
+```
+
+Re-reading the pristine source per anchor is the trap inside the trap: with two anchors in one file the second
+`set` discards the first replacement, every count still passes, and only the last edit lands. A blind
+replace-all would have applied 13 of 14 edits and left the file half-changed and looking done. Two anchor bugs
+this catches: a list marker plus step number (`- [ ] Step 3:`) matches many tasks, so anchor on a unique id; and
+an anchor composed from your memory of the text (`- [ ]`) matches zero once the target has changed (`- [x]`), so
+compose anchors from the target's CURRENT text.
+
 **Lint the target by hand — a post-edit auto-lint hook keyed to editor-tool calls does not fire
 for it.** If your harness runs a lint hook wired to `Edit`/`Write`/`MultiEdit` tool invocations, a
 patch script writing through `fs` from a shell-invoked process is invisible to it: the edit lands
@@ -129,6 +147,31 @@ const data = await res.json();
 console.log(JSON.stringify(data, null, 2));
 ```
 
+### Importable AND runnable: the entrypoint guard
+
+A script that tests import (for its functions) and people run as a CLI needs an "am I the entrypoint" check. Build it with `pathToFileURL`, never a hand-built `file://` string:
+
+```javascript
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+
+const isEntrypoint = () => {
+  if (!process.argv[1]) return false;
+  try { return import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href; }
+  catch { return import.meta.url === pathToFileURL(process.argv[1]).href; }
+};
+
+if (isEntrypoint()) {
+  try { process.exitCode = await main(process.argv.slice(2)); }   // main() may be sync or async
+  catch (err) { console.error(err); process.exitCode = 1; }
+}
+```
+
+- **Never** ``import.meta.url === `file://${process.argv[1]}` ``. On Windows `argv[1]` is `C:\path\x.mjs`, whose URL is `file:///C:/path/x.mjs` (three slashes); the hand-built form never matches and `main()` silently never runs.
+- `realpathSync` because a symlinked entrypoint otherwise fails the comparison silently (Node resolves `import.meta.url` to the real file, `argv[1]` keeps the link).
+- `process.exitCode`, not `process.exit()`: `exit()` can truncate pending pipe writes, and `process.exit(asyncMain())` throws `ERR_INVALID_ARG_TYPE` before the work runs.
+- **This fails in the worst direction: the CLI exits 0 having done nothing.** A CI guard written this way passed on the input it existed to block, and its unit tests stayed green because they imported the functions directly. Any script with a CLI surface needs at least one test that SPAWNS it on a failing input and asserts a non-zero exit; calling `main()` skips the guard entirely.
+
 If you need a self-contained wrapper (e.g. for explicit error propagation):
 
 ```javascript
@@ -163,10 +206,11 @@ node --env-file=.env /tmp/my-script.mjs
 npx dotenv -- node /tmp/my-script.mjs
 ```
 
-If your loader prints log lines (e.g. `[loader][info] injected 12 keys`), filter them so real script output stays visible:
+If your loader prints log lines (e.g. `[loader][info] injected 12 keys`), filter them so real script output stays visible — but **redirect first and filter the file; never pipe the run itself into `grep`.** A pipe replaces the script's exit code with grep's, so a failing run reports success:
 
 ```bash
-npx <loader> -- node /tmp/my-script.mjs 2>&1 | grep -v "Loading\|injected\|suppress"
+npx <loader> -- node /tmp/my-script.mjs > /tmp/out.txt 2>&1; echo "EXIT=$?"
+grep -v "Loading\|injected\|suppress" /tmp/out.txt
 ```
 
 If CWD isn't the project root, point the loader at your `.env` explicitly (loaders typically have `--env-file` or `--cwd`).
@@ -266,6 +310,6 @@ For simple endpoint checks, prefer `curl` directly over a script — it's one li
 - **Script at project root** — pollutes `git status`. Use a temp dir or a tracked `.claude/reviews/`.
 - **Hardcoded secrets** — defeats the point of an env loader. Always `process.env.*`.
 - **CommonJS `require()`** — modern Node is ESM-friendly. Use `import` + `.mjs` extension.
-- **Skipping the noise filter** — `.env` loaders are loud. Pipe through `grep -v "Loading\|injected\|suppress"` (or your loader's silent flag) so real output stands out.
+- **Skipping the noise filter** — `.env` loaders are loud. Filter with `grep -v "Loading\|injected\|suppress"` (or your loader's silent flag) so real output stands out — against the redirected output file, never by piping the run, which swallows its exit code.
 - **`/tmp/` on Windows without thought** — Git Bash's `/tmp` and Node's `C:\tmp` are DIFFERENT directories: a script that writes a file via one and is read via the other fails with ENOENT. Pick one path convention and use it consistently in both the Bash invocation and the script itself — the scratchpad by default, or one explicit `C:/tmp/` path when something outside the session must read the file.
 - **Running scripts without `--env-file` or a loader** — symptoms look like "API returned 401 / no token" but the real cause is `.env` never loaded.

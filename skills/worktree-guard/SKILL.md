@@ -143,7 +143,11 @@ hold nothing at all.
 The checks that actually decide, cheapest first:
 
 1. **`git cherry origin/<default-branch> <branch>`** — empty means every commit on the branch
-   is already upstream. Patch-id aware, so it survives a squash-merge; ancestry alone does not.
+   is already upstream. Patch-id aware, so it survives the squash-merge of a ONE-commit branch;
+   ancestry alone does not. The match is per commit, so a branch of 2+ commits squashed into one
+   shows `+` for every commit even though it merged. For those, compare the whole range as one
+   patch: `git diff origin/<default-branch>...<branch> | git patch-id --stable` against
+   `git show <squash-sha> | git patch-id --stable`.
 2. **Untracked files that are genuinely novel** — diff the untracked set against
    `git ls-tree -r origin/<default-branch> --name-only`. Most "novel"-looking untracked files
    turn out to be untracked *copies* of already-tracked files.
