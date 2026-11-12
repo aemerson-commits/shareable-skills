@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.10.0 (2026-11-12)
+7 skills removed, matching the internal source, which retired them on 2026-11-12. 45 skills total.
+
+### Removed
+- `/algorithmic-art`, `/canvas-design`, `/slack-gif-creator`, `/theme-factory`, `/web-artifacts-builder` (Creative Tools) and `/internal-comms`, `/mcp-builder` (Document & Data). They had no use in the source workflow; `/html-slides` remains the one Creative Tools skill
+- `/docx` — its description no longer points at `/internal-comms`
+
 ## 5.9.0 (2026-10-14)
 13 skill updates + 1 new skill synced from internal source (changes since 2026-09-04), sanitized. +255 / −35 lines. 52 skills total.
 

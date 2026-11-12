@@ -1,6 +1,6 @@
 # Shareable Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 52 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
+A complete development methodology built on parallel agent teams. 45 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
 ## Quick Start
 
@@ -108,18 +108,11 @@ The router classifies the issue, tries the matched team first, and if unresolved
 | `/pdf` | Full PDF toolkit — read, create, merge, split, OCR, watermark, encrypt, fill forms, extract |
 | `/docx` | Create, read, edit, manipulate Word documents (.docx) with TOC, letterhead, templates |
 | `/xlsx` | Read, create, edit, convert spreadsheet files (.xlsx, .xlsm, .csv, .tsv) |
-| `/internal-comms` | Write internal communications — status reports, newsletters, FAQs, incident reports |
-| `/mcp-builder` | Build MCP servers for LLM-service integration (Python FastMCP or Node/TypeScript) |
 
 ### Creative Tools
 
 | Skill | Purpose |
 |-------|---------|
-| `/web-artifacts-builder` | Build elaborate multi-component claude.ai HTML artifacts with React, Tailwind, shadcn/ui |
-| `/algorithmic-art` | Generative art via p5.js with seeded randomness — flow fields, particle systems |
-| `/canvas-design` | Create visual art (.png, .pdf) — posters, designs, static artwork |
-| `/slack-gif-creator` | Create animated GIFs optimized for Slack with constraints and validation |
-| `/theme-factory` | Style artifacts with 10 pre-set themes or generate custom themes on-the-fly |
 | `/html-slides` | One-shot presentation slides from a single prompt — polished, interactive, self-contained HTML |
 
 ### Session Management (requires Obsidian)
@@ -255,7 +248,6 @@ These skills work with any codebase out of the box. Customize for your project:
 - **`/schema-check`**: Update the KV key patterns and DB table list with your project's schema
 - **Session skills** (`/start-day`, `/session-notes`, `/insight`, `/triage-ideas`): Require [Obsidian](https://obsidian.md) with CLI access. Set `{{vault_path}}` and `{{project}}` placeholders to match your vault structure. Auto-detects Obsidian binary on Windows/macOS/Linux
 - **Document skills** (`/pdf`, `/docx`, `/xlsx`): Install required npm packages on first use (`pdf-lib`, `docx`, `exceljs`)
-- **Creative skills** (`/algorithmic-art`, `/canvas-design`): Generate standalone HTML files or use canvas APIs
 
 ## Requirements
 

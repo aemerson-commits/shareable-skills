@@ -1,6 +1,6 @@
 ---
 name: docx
-description: "Create, read, edit, or manipulate Word documents (.docx). Trigger on 'Word doc', '.docx', or formatted document requests (TOC, letterhead, templates). Not for PDFs, spreadsheets, or internal comms (use /internal-comms)."
+description: "Create, read, edit, or manipulate Word documents (.docx). Trigger on 'Word doc', '.docx', or formatted document requests (TOC, letterhead, templates). Not for PDFs or spreadsheets."
 license: Proprietary. LICENSE.txt has complete terms
 ---
 
