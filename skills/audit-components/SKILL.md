@@ -60,7 +60,7 @@ If your projects re-export shared utilities, verify each project's local utils f
 
 ### Phase 1 — Parallel Per-Project Audit
 
-Dispatch agents simultaneously (model: "opus"), one per project. Each agent independently performs checks 1-2 and 5 for its project:
+Dispatch agents simultaneously (model: "sonnet"), one per project. Each agent independently performs checks 1-2 and 5 for its project:
 
 - **Agent: Project A Auditor** — Read App.jsx, check all component imports resolve, verify props passed vs destructured, run lint + build
 - **Agent: Project B Auditor** — Same for project B
@@ -70,7 +70,7 @@ Each agent returns a structured report: `{ project, importIssues[], propIssues[]
 
 ### Phase 2 — Parallel Cross-Project Checks
 
-Dispatch 2 agents simultaneously (model: "opus") for checks 3, 4, and 6:
+Dispatch 2 agents simultaneously (model: "sonnet") for checks 3, 4, and 6:
 
 - **Agent: Shared Utility Auditor** — Check for duplicate utility definitions across all projects (check 3). Verify re-exports match shared source exports (check 6). Flag any missing re-exports or local duplicates.
 - **Agent: Unused Export Auditor** — Check all shared exports have at least one consumer across all projects (check 4). Flag orphaned exports with zero consumers.
@@ -84,12 +84,12 @@ Main agent compiles results from all agents into the final PASS/WARN/FAIL table.
 ## Agent Teams Architecture
 
 ```
-Phase 1 (parallel, model: "opus"):
+Phase 1 (parallel, model: "sonnet"):
   +-- Project A Auditor -----> imports + props + lint/build
   +-- Project B Auditor -----> imports + props + lint/build
   +-- Project C Auditor -----> imports + props + lint/build
 
-Phase 2 (parallel, model: "opus"):
+Phase 2 (parallel, model: "sonnet"):
   +-- Shared Utility Auditor -> duplicates + re-exports (checks 3, 6)
   +-- Unused Export Auditor --> orphaned exports (check 4)
 
@@ -97,7 +97,7 @@ Phase 3 (main agent):
   Compile agent results -> PASS / WARN / FAIL table
 ```
 
-All agents are read-only (no code modifications), so `isolation: "worktree"` is not required.
+All agents are read-only (no code modifications), so `isolation: "worktree"` is not required. Each agent uses `model: "sonnet"`: the checks are mechanical (resolve an import, compare prop names, run lint and build) and their output is verifiable, so a larger model buys nothing.
 
 ## Output Format
 

@@ -1,6 +1,6 @@
 # Shareable Skills for Claude Code
 
-A complete development methodology built on parallel agent teams. 45 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
+A complete development methodology built on parallel agent teams. 46 skills + a continuous learning pipeline covering the full lifecycle: intent discovery, constraint research, implementation planning, build orchestration, adversarial review, diagnostic debugging, design exploration, testing, deployment, document generation, creative tools, session management, skill maintenance, and automated pattern extraction.
 
 ## Quick Start
 
@@ -100,6 +100,7 @@ The router classifies the issue, tries the matched team first, and if unresolved
 | `/frontend-design` | UI/UX design patterns, color tokens, chart-legend conventions, modal patterns, and component conventions. |
 | `/design-showcase` | Build a side-by-side visual comparison of 3–7 design variants for a component/view as a self-contained HTML showcase — pick a direction before implementing. |
 | `/design-reverse-engineer` | Reverse-engineer a design system from a URL (typography, palette, spacing, components, micro-interactions) into a Claude-ready design spec. |
+| `/mockup-from-real-data` | Build a mock of a live view from saved real records, check it at three widths in both themes, and judge the options before anyone is asked to approve one. |
 
 ### Document & Data Generation
 
@@ -246,7 +247,7 @@ These skills work with any codebase out of the box. Customize for your project:
 - **`/deploy-all`**: Configure the project table with your Cloudflare Pages project names and CI workflows
 - **`/env-audit`**: Customize the context table with your project's runtime environments
 - **`/schema-check`**: Update the KV key patterns and DB table list with your project's schema
-- **Session skills** (`/start-day`, `/session-notes`, `/insight`, `/triage-ideas`): Require [Obsidian](https://obsidian.md) with CLI access. Set `{{vault_path}}` and `{{project}}` placeholders to match your vault structure. Auto-detects Obsidian binary on Windows/macOS/Linux
+- **Session skills** (`/start-day`, `/session-notes`, `/insight`, `/triage-ideas`): Require an [Obsidian](https://obsidian.md) vault (a folder of Markdown files). Set `{{vault_path}}` and `{{project}}` placeholders to match your vault structure. `/start-day`, `/triage-ideas` and `/session-notes` checkpoints read and write the files directly; `/insight` and the full close-out in `/session-notes` also use the Obsidian CLI
 - **Document skills** (`/pdf`, `/docx`, `/xlsx`): Install required npm packages on first use (`pdf-lib`, `docx`, `exceljs`)
 
 ## Requirements

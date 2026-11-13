@@ -5,22 +5,28 @@ description: "End-of-session notes. Two modes — cheap `checkpoint`, the defaul
 
 # Session Notes — Obsidian Vault Update
 
-## Obsidian CLI
+## Vault files
 
-**Auto-detect**: Set `OBS` var based on which binary exists:
+The vault is a folder of Markdown files. **Read and write it directly**: the Read and Edit tools
+on `{{vault_path}}/<path>`, or a plain file append. Do not route a checkpoint through the
+Obsidian CLI. Driving the desktop binary from a shell is the unreliable path: an append can hang
+past two minutes, launch the app instead of acting, or stall on the binary's update check, and
+each of those costs a checkpoint.
+
+Resolve `{{vault_path}}` at runtime (an env var, else the per-user default) and never hardcode a
+username.
+
+⚠️ **`$USER` is EMPTY in the Bash tool on Windows** — `$USERNAME` carries it. A bare `$USER`
+silently builds `/c/Users//...`, which fails a `[ -f ]` test and reads as "not installed" rather
+than as a broken path. Always `${USERNAME:-$USER}`.
+
+The CLI recipes that remain are the full close-out's (`references/close-out-artifacts.md`), where
+vault-wide `tasks` and `search` queries have no file-read equivalent. If one of its read or
+append recipes hangs, the direct file read or append is the fallback. CLI output goes to stderr,
+so append `2>&1` and filter the startup noise:
 ```bash
 OBS="/c/Program Files/Obsidian/Obsidian.exe"
 [ ! -f "$OBS" ] && OBS="/c/Users/${USERNAME:-$USER}/AppData/Local/Programs/obsidian/Obsidian.exe"
-```
-
-⚠️ **`$USER` is EMPTY in the Bash tool on Windows** — `$USERNAME` carries it. A bare `$USER`
-silently builds `/c/Users//AppData/...`, which fails the `[ -f ]` test and reads as "the binary
-isn't installed" rather than as a broken path. Always `${USERNAME:-$USER}`.
-
-**Always use Obsidian CLI** for vault operations.
-
-All CLI commands output to stderr — always append `2>&1` and filter startup noise:
-```bash
 "$OBS" <command> [args] 2>&1 | grep -v "Loading\|out of date"
 ```
 
@@ -70,9 +76,32 @@ escalation it never was.
 Append one compact block to today's session note. **Do not** touch Roadmap, project
 frontmatter, memory, help content, or the skill tracker.
 
-```bash
-"$OBS" append path="{{project}}/Sessions/{YYYY-MM-DD}.md" content="\n### {HH:MM} — {topic} (session {id8}, {host})\n\n- {what landed}\n- Left off: {state}\n" 2>&1 | grep -v "Loading\|out of date"
+Write the block to a scratch file first:
+
+```markdown
+### {HH:MM} — {topic} (session {id8}, {host})
+
+- {what landed}
+- Left off: {state}
 ```
+
+Then append it with a direct file write and confirm it landed:
+
+```bash
+NOTE="{{vault_path}}/{{project}}/Sessions/$(date +%F).md"
+[ -f "$NOTE" ] || printf '# %s\n' "$(date +%F)" > "$NOTE"    # start the day's note when there is none
+before=$(grep -c "session {id8}" "$NOTE")
+{ printf '\n'; cat "<scratch>/checkpoint.md"; } >> "$NOTE"
+after=$(grep -c "session {id8}" "$NOTE"); [ "$after" -gt "$before" ] && echo "confirmed" || echo "NOT CONFIRMED"
+```
+
+If several sessions can write the same note, put the append in a small helper that holds a
+per-note lockfile and re-reads the note afterwards, so two appends cannot interleave and an
+unconfirmed write says so through its exit code.
+
+**Work from an earlier day** (a session that sat idle overnight): the block belongs in the note
+for the day the work happened, not today's. Point `NOTE` at that date, then check that the day's
+note holds your block exactly once.
 
 Write any `Learnings` bullets in the routed shape now (see § Session Learning Protocol) so an
 end-of-day ingest — yours or a script's — can pick them up. That's what makes checkpointing
@@ -243,6 +272,7 @@ If a scheduler runs the full close-out with nobody watching, the rules change:
 
 - **A dry-run must gate every OUTBOUND side effect, not only repo writes.** "Write no artifact, commit nothing, push nothing" are all repo-write verbs. If the run's output is a questions file and the runner's re-ask path delivers it, a dry-run still pages real people. In dry-run the questions are an artifact to read; if you cannot tell whether a step delivers, treat it as delivering and leave it undone.
 - **Never guess a judgment call.** Leave the artifact unchanged and queue a plain two-answer question (a gate advance, an audience decision, whether an item is safe to run unattended). Feed answers back through the next run's prompt, and let the run mark a question obsolete if the repo already settles it.
+- **A queued question reaches its reader or fails loudly.** If the runner validates the shape of a question (an id pattern, a label length), have it repair what it can and keep an entry whose send failed, with the reason logged. A runner that drops a malformed entry and only counts it loses the question: an over-long id is enough to keep one from ever being delivered. Write the recommendation in the answer labels' exact words (`Recommend Yes, leave it`, not `Recommend Yes`), because a sender that checks a recommendation against its buttons will strip one that names an answer the buttons do not offer.
 - **Coverage is the window since the last successful run, not the calendar day.** Only a clean live run advances the watermark, so a failed run leaves the gap for the next one.
 - **Land the bookkeeping where the next reader looks.** Close-out writes that stay in the launching checkout are invisible to the nightly jobs that consume them; commit them from a throwaway worktree on a fresh remote head, and cut that worktree inside the repo so pre-push hooks can resolve dependencies.
 - **Never touch the notes vault's git state in a dry-run**, not even a fetch; read files, `git log` and `git show` only.
@@ -261,10 +291,11 @@ the timing to them.
 
 ## Important
 
-- **Prefer Obsidian CLI** for vault operations (create, append, read, tasks, search)
-- Use Edit tool only for repo-local files (memory/, CLAUDE.md) and for frontmatter — some
-  Obsidian versions silently no-op a CLI `property:set` against externally-written files; if
-  that bites you, edit the YAML block directly instead
+- **Read and edit vault files directly** (Read and Edit tools, or a file append); a checkpoint
+  never goes through the Obsidian CLI, and the full close-out falls back to a direct read or
+  append when a CLI recipe hangs (see § Vault files)
+- Edit frontmatter as a YAML block with the Edit tool — some Obsidian versions silently no-op a
+  CLI `property:set` against externally-written files
 - Keep notes concise and actionable
 - Always include "Left Off" so the next session can resume quickly
 - A day that ends on checkpoints alone leaves the Feature-Ship artifacts behind for work that

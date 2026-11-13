@@ -12,7 +12,7 @@ Goal: top-end reasoning only where the task warrants it. The main loop is the ex
 
 | Layer | Model | Effort | Rationale |
 |-------|-------|--------|-----------|
-| Main loop (orchestrator) | Your configured main-loop model (e.g. `claude-fable-5[1m]`) | session `effortLevel: high` | Adaptive thinking scales depth to the task at `high`; `xhigh` forces deep reasoning on every trivial turn. Escalate per session, not globally. |
+| Main loop (orchestrator) | Your configured main-loop model, named by alias (e.g. `fable`) rather than a version-pinned id, so the setting follows new releases | session `effortLevel: high` | Adaptive thinking scales depth to the task at `high`; `xhigh` forces deep reasoning on every trivial turn. Escalate per session, not globally. |
 | Standard subagents | `sonnet` | inherits session | Implementation, research, file reads, builds, deploys, report formatting. |
 | Critical subagents | `opus` | `high` default, `max` for irreversible | Security review, adversarial analysis, architecture, financial logic, forensic RCA. |
 | Pure code search | `Explore` subagent type | n/a | Harness-backed fast search agent — cheapest way to locate code. |
@@ -29,7 +29,7 @@ The old note "effort is session-level only" is **obsolete** — per-agent effort
 - **Per-agent**: `.claude/agents/*.md` frontmatter supports `effort:` alongside `model:` — that agent runs at its own effort regardless of session level.
 - **Per-prompt**: include `ultrathink` in a prompt for a one-off deep pass without changing session state.
 - **Precedence**: `CLAUDE_CODE_EFFORT_LEVEL` env > agent frontmatter > session `/effort` / `effortLevel` setting.
-- **Fable / Opus 4.8+**: adaptive thinking only — it cannot be disabled; effort controls its depth. At `low`/`medium` the model may skip thinking entirely on simple tasks. `MAX_THINKING_TOKENS` is deprecated for these models — do not use it.
+- **Fable 5.x / Opus 5.5**: adaptive thinking only — it cannot be disabled; effort controls its depth. At `low`/`medium` the model may skip thinking entirely on simple tasks. `MAX_THINKING_TOKENS` is deprecated for these models — do not use it.
 - **`CLAUDE_CODE_SUBAGENT_MODEL`**: NEVER set this globally. It silently overrides every skill's per-agent model pins (flattening Opus reviewers to whatever it names). Routing lives in call sites, not env.
 
 ## Session defaults (the system)
@@ -52,6 +52,25 @@ Ask: **"If this agent misses something, what happens?"**
 | Orchestration, synthesis of agent outputs, user-facing conclusions | main-loop model | session | don't delegate |
 
 **Opus effort preference (standing decision):** when Opus depth is warranted beyond `high`, skip `xhigh` and go straight to `max`. Guessing the "between" tier adds decision overhead without reliably saving cost. `high` when it suffices; `max` when it doesn't.
+
+## Sessions started from a task brief
+
+The rules above are for subagents. When a launcher starts whole sessions from a written brief (a task queue, a set of consoles), **every brief carries an explicit model line and an effort line**, and the launcher refuses a line it cannot read instead of guessing. A missing line falls back to the most expensive default: in one 30-day measurement, 60% of started sessions carried neither line. After the start, compare the session's actual model and effort with what it was started on, and flag a mismatch.
+
+Defaults from that measurement (about 1,500 runs over 30 days; re-measure on your own work before trusting them):
+
+| Session work | Model | Effort | What the runs showed |
+|--------------|-------|--------|----------------------|
+| Ordinary build or UI change (no migration, auth, money or production data write) | opus | medium | Median cost about 40% below `high`, rework the same or lower; first-pass CI was the one number that dipped |
+| High-risk build: migration, auth/security, money, production data, 3+ projects | opus | high | Never run lower |
+| Small or mechanical code edit (under ~100 lines, tests exist) | sonnet | medium | CI pass rate as good, at well under half the cost |
+| No-code run: decision notes, emails, queue reads, report formatting | sonnet | medium | Finished more often than on opus `high`, at well under half the cost |
+| Diagnosis: a check or spot-check | sonnet | medium | Cheap, but needed a nudge more often |
+| Diagnosis of a root cause or repeat failure; a fix; research, design, review | opus | high | |
+| Release, production step, install, deploy check | opus | high | On sonnet `medium` these finished less often and stalled five times as often |
+| No line at all (the launcher's fallback) | opus | high | Kept high on purpose: a missing line costs money, and never puts a production step on `medium` |
+
+`max` is never a default: it showed no gain over `high` at 1.5 to 2.7 times the cost. Never change the model of a session that is already running.
 
 ## Pre-tiered agents (`.claude/agents/`)
 

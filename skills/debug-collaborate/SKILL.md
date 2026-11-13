@@ -21,7 +21,7 @@ Ask these questions (answer from context or ask the user):
 
 ### Phase 2: Spawn Parallel Investigation Agents
 
-Launch 3-4 Task agents simultaneously with these roles:
+Launch 3-4 Task agents simultaneously (`model: "opus"`: hypothesis work is judgment, and an unpinned agent inherits the main-loop model) with these roles:
 
 **Agent A - Root Cause Analyst**:
 ```

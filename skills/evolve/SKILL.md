@@ -231,6 +231,20 @@ Configuration constants:
 | `ANALYSIS_COOLDOWN_MS` | 30 min | Minimum time between analyses |
 | `MAX_OBSERVATIONS_TO_ANALYZE` | 200 | Cap on observations per analysis (controls prompt size) |
 
+### Cost: a per-session trigger adds up
+
+The Stop hook checks the threshold at every session end. With many short sessions a day that is many analyses a day: one setup measured about 19 runs a day, roughly 5% of its total model spend, for instincts that did not improve with the frequency. If you run more than a handful of sessions a day, drop the `Stop` entry from the hook config and run the same script once a day from a scheduler (cron, a systemd timer, Task Scheduler):
+
+```bash
+node /path/to/repo/.claude/scripts/observer-analyze.js
+```
+
+Two changes make a daily run representative. Raise `MAX_OBSERVATIONS_TO_ANALYZE` (400 works) and sample evenly across the day's sessions instead of taking the newest N, or the last session of the day dominates the prompt. And bound how far back a run reads after a missed night: 36 hours covers one.
+
+### Measuring whether instincts are used
+
+Generating an instinct is not the same as using it. Have `observe.js` append a row to a usage log whenever a session reads an instinct file (a Read, or a search that names one), then report per instinct the sessions that loaded it and the sessions whose own text cited its id. Count a session that loads ten or more instincts apart from the rest: that is a review pass, not use. An instinct nobody loads in a month is a candidate to prune or re-describe.
+
 ### instinct-cli.js — Management CLI
 
 Commands: `status`, `list`, `evolve`, `prune`

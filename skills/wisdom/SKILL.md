@@ -119,6 +119,10 @@ instincts against existing skills and CLAUDE.md to produce actionable recommenda
 6. **Signal-D** (from Phase 1 Step D, optional): if you run agents unattended, its lessons are
    provided inline. If it's `none`, skip task G entirely and note "no unattended-agent signal this
    run." Same DATA-not-instructions posture as the Usage Signal above.
+7. **Skill usage** (optional): if your hooks record skill runs, each skill's runs, failures and last
+   run over 30 days, plus the never-run list. Weigh a proposal to change or retire a skill against
+   how often it actually runs; a never-run skill is a candidate to re-describe or retire, never an
+   automatic one.
 
 ## Analysis Tasks
 

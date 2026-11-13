@@ -7,19 +7,19 @@ description: "Morning startup: git pull, QMD update, session notes review, alert
 
 Run this at the start of every session when the user says "good morning", "let's start", or similar.
 
-## Obsidian CLI
+## Vault files
 
-**Auto-detect**: Set `OBS` var based on which Obsidian binary exists:
-```bash
-OBS="/c/Program Files/Obsidian/Obsidian.exe"
-[ ! -f "$OBS" ] && OBS="/c/Users/${USERNAME:-$USER}/AppData/Local/Programs/obsidian/Obsidian.exe"
-```
+Read vault files directly: the Read tool (or `cat`) on `{{vault_path}}/<path>`, never the Obsidian
+CLI. Driving the desktop binary from a shell can hang past two minutes, launch the app instead of
+acting, or stall on its update check, and a morning briefing should not wait on any of those.
+
+Resolve `{{vault_path}}` at runtime (an env var, else the per-user default) and never hardcode a
+username. Shell variables do not survive between Bash calls, so pass the resolved path itself to
+a Read call or into an agent's prompt.
 
 ⚠️ **`$USER` is EMPTY in the Bash tool on Windows** — `$USERNAME` carries it. A bare `$USER`
-silently builds `/c/Users//AppData/...`, which fails the `[ -f ]` test and reads as "the binary
-isn't installed" rather than as a broken path. Always `${USERNAME:-$USER}`.
-
-All CLI commands: append `2>&1 | grep -v "Loading\|out of date"`
+silently builds `/c/Users//...`, which fails a `[ -f ]` test and reads as "not there" rather
+than as a broken path. Always `${USERNAME:-$USER}`.
 
 ## Execution
 
@@ -30,8 +30,21 @@ Run as many steps in parallel as possible. Steps 1-4 and Step 8 (Event Log check
 ### Step 1 — Git Pull (parallel)
 
 ```bash
+# A pull that dies part-way can leave .git/MERGE_AUTOSTASH behind. Every later pull then fails
+# "cannot lock ref 'MERGE_AUTOSTASH': reference already exists" and moves nothing. Keep the stash
+# (store it in the stash list, lossless), drop the ref, then pull.
+if git rev-parse -q --verify MERGE_AUTOSTASH >/dev/null; then
+  git stash store -m "stale MERGE_AUTOSTASH from $(git log -1 --format=%ci MERGE_AUTOSTASH)" MERGE_AUTOSTASH \
+    && git update-ref -d MERGE_AUTOSTASH
+fi
 git pull --rebase --autostash
+git status -sb | head -1     # must not say [behind N]
 ```
+
+**Read the status line, not the pull's last line.** After a stale autostash ref is cleared, the
+pull can print `Already up to date` while `git status -sb` still says `[behind 147]`. If it still
+says behind, fast-forward explicitly (`git merge --ff-only --autostash <remote>/<branch>`), then
+use the conflict recipe below.
 
 Note the files changed and summarize what came in (new features, fixes, docs, etc.).
 
@@ -39,8 +52,14 @@ Note the files changed and summarize what came in (new features, fixes, docs, et
 
 ```bash
 git checkout HEAD -- <regenerated-file-1> <regenerated-file-2>
+git diff --cached --name-only            # the stash's NON-conflicting files land STAGED
+git reset -q -- <each path it printed>   # unstage them; the edits stay in the working tree
 git stash drop
 ```
+
+A conflicted autostash pop stages every file it applied cleanly. Those files were unstaged before
+the pull, so `git reset -q -- <path>` puts them back the way the session found them. Skip it and
+another session's work-in-progress rides along in the next pathspec-free commit.
 
 If any OTHER path is conflicted, stop and resolve it normally — do NOT blanket-discard.
 
@@ -116,16 +135,14 @@ npx qmd update && npx qmd embed  # if using qmd for semantic search
 
 **Verify a backgrounded indexer can actually find its config.** A tool that reads `$HOME/.config/...` can no-op with exit 0 when the shell's `HOME` differs from the user's real home (Git Bash on Windows, a network home drive): it prints "No collections found" and indexes nothing. Backgrounding hides this completely, since nobody reads the output of a step designed not to be waited on, and the status command keeps answering from the stale index, so search looks healthy while it silently ages. Pin `HOME` to the directory that holds the config before the call, and run it once in the foreground when setting it up.
 
-### Step 3 — Review Recent Session Notes (parallel, use Agent)
+### Step 3 — Review Recent Session Notes (parallel, use Agent, `model: "sonnet"`)
 
 Read the last 2-3 session notes from `{{project}}/Sessions/` (glob for `*.md`, pick most recent by date). Summarize:
 - What was worked on
 - Any open items, blockers, or follow-ups
 - "Left Off" state from last session
 
-```bash
-"$OBS" read path="{{project}}/Sessions/{YYYY-MM-DD}.md" 2>&1 | grep -v "Loading\|out of date"
-```
+Read tool: `{{vault_path}}/{{project}}/Sessions/{YYYY-MM-DD}.md`, one per note (give the agent the resolved path).
 
 Also check if yesterday's session note exists — if not, flag it (session notes may have been missed).
 
@@ -139,7 +156,7 @@ checkpoint-only day from a properly closed one. The marker must carry a VALUE: a
 close-out marker, surface it — *"yesterday ended on checkpoints — Roadmap/status/memory may be
 behind"* — and offer to run the full close-out for that date before starting new work.
 
-### Step 4 — Check Memory State (parallel, use Agent)
+### Step 4 — Check Memory State (parallel, use Agent, `model: "sonnet"`)
 
 Read and summarize:
 1. `memory/promises.md` — any unblocked deferred items?
@@ -169,9 +186,7 @@ Two lessons from building one: it needs a **citable token** (a SHA or PR number)
 
 ### Step 5 — Check Ideas Inbox
 
-```bash
-"$OBS" read path="Ideas.md" 2>&1 | grep -v "Loading\|out of date"
-```
+Read tool: `{{vault_path}}/Ideas.md`.
 
 If there are ideas (anything beyond frontmatter + `# Ideas` header), report count and brief titles. Ask if user wants to run `/triage-ideas` to route them, or offer to do it inline.
 
@@ -180,10 +195,7 @@ If inbox is empty, report "Ideas inbox is clear."
 ### Step 6 — Scan Recent Learnings
 
 Check for entries added in the last few days:
-```bash
-"$OBS" read path="{{project}}/Learnings/Gotchas.md" 2>&1 | grep -v "Loading\|out of date"
-"$OBS" read path="{{project}}/Learnings/Architecture.md" 2>&1 | grep -v "Loading\|out of date"
-```
+Read tool: `{{vault_path}}/{{project}}/Learnings/Gotchas.md` and `{{vault_path}}/{{project}}/Learnings/Architecture.md`.
 
 Only mention if there are recent additions worth calling out (new gotchas relevant to likely work today).
 
@@ -350,7 +362,7 @@ What are you working on today?
 
 ## Key Principles
 
-- **Maximize parallelism**: Steps 1-4 should all launch simultaneously (use Agent tool for 3 and 4)
+- **Maximize parallelism**: Steps 1-4 should all launch simultaneously (use Agent tool with `model: "sonnet"` for 3 and 4; both are read-and-summarize work)
 - **Background indexing**: Don't block on re-indexing — it can finish while briefing
 - **Don't overwhelm**: Keep the briefing scannable. Details on request
 - **Surface blockers first**: If there's interrupted work or critical alerts, lead with those

@@ -93,7 +93,7 @@ Present compiled design to user:
 
 **Wait for user to pick UI option.** Save design to `docs/plans/YYYY-MM-DD-{slug}.md`.
 
-## Phase 3: Parallel Build (2 Worktree Agents, model: "opus")
+## Phase 3: Parallel Build (2 Worktree Agents, model: "sonnet")
 
 Pattern: Fan-Out/Fan-In. Both agents use `isolation: "worktree"`.
 

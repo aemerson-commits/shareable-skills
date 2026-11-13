@@ -212,6 +212,10 @@ marked met by hand once actually verified.
 - **When a gate turns out to be impossible, don't delete it** — mark it abandoned with the
   reason (`ABANDON: G2 <why, and who/what it's handed to>`) so the gap stays visible instead of
   quietly vanishing from the ledger.
+- **Ticking a gate is a write to a shared file.** Fetch, branch from the remote head and re-read the
+  ledger AFTER the fetch, because another session may have ticked or reworded the gate. Tick only
+  the gates you measured, and fill `EVIDENCE:` with the command, the time and the commit or PR. Land
+  the tick as a ledger-only change or inside the gate's own code change.
 
 This pattern works as plain discipline even with no tooling behind it — write the ledger before
 Task 1, don't tick a box until its check has actually been re-run. If your project has some way

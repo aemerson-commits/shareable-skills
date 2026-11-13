@@ -22,7 +22,7 @@ Templated pipeline for building new Cloudflare Workers. Most workers follow the 
 2. Determine type and cron schedule
 3. Read existing worker of same type for reference pattern
 
-## Phase 1: Parallel Build (3 Agents, model: "opus")
+## Phase 1: Parallel Build (3 Agents, model: "sonnet")
 
 Pattern: Fan-Out/Fan-In. All use `isolation: "worktree"`.
 

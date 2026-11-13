@@ -37,6 +37,8 @@ See `philosophies.md` (in this directory) for the full catalog.
 
 Write one consistent fake dataset that all variants use. For data-heavy components: use real-sounding identifiers, descriptions, quantities, and dates. Consistent data is critical — variants must differ only in design, not in content.
 
+Invented data is for comparing STYLE only. A mock of a live view that someone will approve as what the screen shows is built from saved real records instead → `/mockup-from-real-data`.
+
 ### Step 4 — Dispatch one Opus agent
 
 ```javascript

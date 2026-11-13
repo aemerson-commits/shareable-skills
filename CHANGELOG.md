@@ -1,5 +1,37 @@
 # Changelog
 
+## 5.11.0 (2026-11-13)
+15 skill updates + 1 new skill synced from internal source (changes since 2026-10-14), sanitized. +227 / −65 lines. 46 skills total.
+
+### Design
+- **NEW `/mockup-from-real-data`** — a mock of a live view is read as a picture of what the screen will show, so every value in it comes from a saved pull of real records, never an invented one. One scratch folder per item: save the pulls, a data module that names the source of every value, a generator that writes one fragment, a lint of that fragment, and a render check at three widths in both themes. Options are then judged from the same four inputs each (page text, outline, same-width crops, and a dump of hover text, which no screenshot shows)
+- `/design-showcase` — invented data is for comparing style only; a mock someone will approve as what the screen shows goes to `/mockup-from-real-data`
+
+### Session Management
+- `/session-notes` — a checkpoint is a direct file append, never the Obsidian CLI, which can hang past two minutes, launch the app instead of acting, or stall on its update check. The append recipe writes the block from a scratch file and confirms it landed; work from an earlier day goes in that day's note. Unattended close-out: a queued question reaches its reader or fails loudly (repair a malformed entry and keep one whose send failed, never drop and count), and the recommendation is written in the answer labels' exact words
+- `/start-day` — vault files are read directly, not through the CLI. The pull clears a stale `MERGE_AUTOSTASH` ref first (stored losslessly in the stash list) and reads `git status -sb` rather than the pull's last line, which can say "Already up to date" while the branch is still behind. A conflicted autostash pop stages the files it applied cleanly, so unstage them before dropping the stash. The two summary agents are pinned to `sonnet`
+- `/triage-ideas` — the inbox and roadmap are read directly and searched with `grep` or a local index, not the Obsidian CLI
+
+### Skill Maintenance & Learning
+- `/evolve` — **a per-session analysis trigger adds up**: one setup measured about 19 analyses a day at roughly 5% of total model spend. Run the analysis once a day from a scheduler instead, with a larger observation cap sampled evenly across the day's sessions and a bounded look-back after a missed night. New usage measure: log when a session reads an instinct file, and report loads and citations per instinct, with review passes counted apart
+- `/skill-audit` — new **Check 1b: Usage**: skills with no run in 30 days are review candidates (stale, mis-described or seasonal), never deleted on that signal alone. The learning-pipeline check grades only the active project hash, since worktree and agent hashes legitimately read `Last analysis: never`
+- `/wisdom` — skill usage is an optional analyzer input: weigh a proposal to change or retire a skill against how often it runs
+
+### Reference & Conventions
+- `/model-selection` — new section for **sessions started from a task brief**: every brief carries explicit model and effort lines and the launcher refuses a line it cannot read, because a missing line falls back to the most expensive default (60% of started sessions in one 30-day measurement). Ships the measured defaults table: ordinary builds at `medium` effort cost about 40% less with the same rework, no-code runs finish more often on the smaller model, production steps stay on the larger one, and `max` is never a default. Name the main-loop model by alias, not a version-pinned id
+- `/throwaway-script` — an exploration script that ends in a real write (a Send click, a POST) repeats the write every time it is re-run to look at the page; stop before the write or put it behind an off-by-default `--send` flag
+
+### Quality & Verification
+- `/webapp-testing` — driving a long console page: snapshot to a file, grep it for the role and label, act by uid, re-snapshot after every step, and never type until the target field shows `focused`, or the keys fire page shortcuts
+- `/audit-components` — the read-only audit agents are pinned to `sonnet`; the checks are mechanical and verifiable
+
+### Development Pipeline
+- `/write-plan` — ticking a gate is a write to a shared file: fetch, re-read the ledger after the fetch, tick only what you measured, and fill the evidence with the command, time and commit
+- `/debug-collaborate` — the investigation agents carry an explicit `opus` pin; an unpinned agent inherits the main-loop model
+
+### Build Orchestration
+- `/worker-build`, `/full-stack-build` — the parallel build agents are pinned to `sonnet`; review and verification stay on `opus`
+
 ## 5.10.0 (2026-11-12)
 7 skills removed, matching the internal source, which retired them on 2026-11-12. 45 skills total.
 

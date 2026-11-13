@@ -16,6 +16,8 @@ The `chrome-devtools` MCP server attaches to a **persistent** profile so auth SS
 
 **Prefer the Playwright temp-script for deployed-page verification.** The headless loop below (throwaway context + auth cookie injection) has none of these failure modes — no persistent profile, no lock collision, no auth bounce. Use the chrome-devtools MCP only for interactive single-page poking, not routine post-deploy checks.
 
+**Driving a long console page (a cloud console, an admin panel, any long form):** call `take_snapshot` with `filePath` set to a scratch file, grep that file for the role and label you need (add `|error|already` to the pattern), then click or `fill` by the uid it returns. Take a new snapshot after every step, because uids change and an old one points at nothing. Never type keys until the snapshot shows the target field `focused`: with no field focused, the keys go to the page as keyboard shortcuts, which can fire console actions and mistype an identifier.
+
 **Recovery when the MCP IS needed and the lock is stuck:**
 
 1. Try `list_pages` → `select_page` first — if the running browser belongs to *this*

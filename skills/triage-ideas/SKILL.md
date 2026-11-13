@@ -7,24 +7,18 @@ description: "Process Obsidian Ideas.md inbox — route ideas to project roadmap
 
 Process the Ideas inbox — route each idea to the appropriate project roadmap.
 
-**Obsidian CLI** (for read/search only — no edit command):
-```bash
-OBS="/c/Program Files/Obsidian/Obsidian.exe"
-[ ! -f "$OBS" ] && OBS="/c/Users/${USERNAME:-$USER}/AppData/Local/Programs/obsidian/Obsidian.exe"
-# All commands need 2>&1 | grep -v "Loading\|out of date"
-# NOTE: $USER is EMPTY in the Bash tool on Windows ($USERNAME carries it). A bare $USER
-# builds /c/Users//AppData/... which fails [ -f ] and reads as "not installed".
-```
+**Vault files are read directly** (the Read tool on `{{vault_path}}/<path>`) and searched with a
+local index or `grep`, never through the Obsidian CLI: driving the desktop binary from a shell can
+hang past two minutes, launch the app instead of acting, or stall on its update check.
 
-**Obsidian vault path**: `{{vault_path}}` — resolve at runtime; don't hardcode a username.
+**Obsidian vault path**: `{{vault_path}}` — resolve at runtime; don't hardcode a username. On
+Windows build any per-user path with `${USERNAME:-$USER}`, because `$USER` is empty in the Bash tool.
 **Roadmap file**: `{{vault_path}}/{{project}}/Roadmap.md`
 **Ideas file**: `{{vault_path}}/Ideas.md`
 
 ## Step 1 — Read the inbox
 
-```bash
-"$OBS" read path="Ideas.md" 2>&1 | grep -v "Loading\|out of date"
-```
+Read tool: `{{vault_path}}/Ideas.md`.
 
 If the only content is the frontmatter and `# Ideas` header with no bullets, report "Ideas inbox is clear" and stop.
 
@@ -39,7 +33,7 @@ Analyze each idea and classify:
 
 Use vault context to flesh out the idea (run searches in parallel):
 ```bash
-"$OBS" search query="{relevant keywords}" limit=10 2>&1 | grep -v "Loading\|out of date"
+grep -rli "{relevant keywords}" "{{vault_path}}/{{project}}" | head -10    # or your vault search index
 ```
 
 Also read the roadmap to check for duplicates.
