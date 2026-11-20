@@ -156,6 +156,8 @@ checkpoint-only day from a properly closed one. The marker must carry a VALUE: a
 close-out marker, surface it — *"yesterday ended on checkpoints — Roadmap/status/memory may be
 behind"* — and offer to run the full close-out for that date before starting new work.
 
+**If the close-out runs on a schedule, check its watermark, not each note.** A scheduled close-out usually stamps only the NEWEST note and covers every earlier day through a `closed_through` watermark beside the stamp. Under that design a note with no marker is normal, and grepping each note for the marker flags covered days as missed and invites a by-hand close-out nobody owes. Compare the watermark with the last slot the schedule names instead. A watermark older than that slot means the run did not finish: lead the briefing with it, and fix the scheduler before falling back to a manual close-out. If you can't read the schedule or the watermark, say the check could not run. Never read that as covered.
+
 ### Step 4 — Check Memory State (parallel, use Agent, `model: "sonnet"`)
 
 Read and summarize:

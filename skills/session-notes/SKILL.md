@@ -99,6 +99,8 @@ If several sessions can write the same note, put the append in a small helper th
 per-note lockfile and re-reads the note afterwards, so two appends cannot interleave and an
 unconfirmed write says so through its exit code.
 
+**When the vault is a git clone, the helper should also pull before it writes, then commit the day note alone and push it.** Do not leave that to an auto-commit plugin. If the plugin stops committing on one machine, nobody notices: that machine's close-out never sees the other machines' checkpoints, and its stale copy of the note then blocks every later pull. Give "written and confirmed here, but NOT pushed" its own exit code (no connection, rebase in progress, push refused). Report it in the checkpoint line, and re-run later: the helper writes nothing twice and only retries the push.
+
 **Work from an earlier day** (a session that sat idle overnight): the block belongs in the note
 for the day the work happened, not today's. Point `NOTE` at that date, then check that the day's
 note holds your block exactly once.

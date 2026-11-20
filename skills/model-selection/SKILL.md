@@ -95,6 +95,10 @@ Every `agent()` call in a workflow script must pass `model:` explicitly — work
 | `/qa-sweep` view judges | `sonnet` |
 | Forensic teams (`/deep-root-cause`, `/temporal-forensics`, etc.) | `opus`, consider `critical-reviewer` for the verdict agent |
 
+## Escalate one rung at a time
+
+Treat model and effort as one ladder: R0 sonnet/low, R1 sonnet/medium, R2 sonnet/high, R3 opus/high, R4 opus/max, then ask the operator. Start at the lowest rung that fits the task class above. When a result fails its acceptance check, move ONE rung up. Do not re-run at the same rung and hope. If an autonomous fleet dispatches on its own ladder, keep it in one machine-readable file and have this section defer to it, so the two cannot drift.
+
 ## What NOT to do
 
 - **Don't dispatch unpinned.** An unpinned file-search agent inherits the main-loop model and burns its tokens at session effort for zero quality gain. Every `Agent()`/`agent()` call states its model.

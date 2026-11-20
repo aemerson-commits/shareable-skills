@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.12.0 (2026-11-20)
+4 skill updates synced from internal source (changes since 2026-11-13), sanitized. +11 / −1 lines. 46 skills total.
+
+### Session Management
+- `/session-notes` — when the vault is a git clone, the append helper pulls first, then commits the day note alone and pushes it, rather than trusting an auto-commit plugin that can silently stop on one machine. "Written and confirmed but NOT pushed" gets its own exit code and is retried by re-running
+- `/start-day` — a scheduled close-out that stamps only the newest note and keeps a `closed_through` watermark is checked by comparing the watermark with the schedule's last slot, never by grepping each note for the marker
+
+### Reference & Conventions
+- `/model-selection` — escalate one rung at a time on a sonnet/low → opus/max ladder when a result fails its acceptance check, instead of re-running at the same rung
+
+### Development Pipeline
+- `/write-plan` — bare `node --test <glob>` prints `fail 0` when the glob matched nothing, so a `fail 0` EXPECT passes on zero tests; wrap it in a script that also requires a non-zero count
+
 ## 5.11.0 (2026-11-13)
 15 skill updates + 1 new skill synced from internal source (changes since 2026-10-14), sanitized. +227 / −65 lines. 46 skills total.
 

@@ -190,7 +190,9 @@ marked met by hand once actually verified.
   prefix, resolves nowhere from the ledger's own folder, so pass an explicit cwd or set one per gate); and the
   wrong runner (a gate that invoked one test framework against a package tested with another, with an `EXPECT:`
   string only the first framework prints). Match `EXPECT:` to the wording of the runner you actually ran. A
-  "no tests found" red reads as "nothing to do", so treat it as a broken gate.
+  "no tests found" red reads as "nothing to do", so treat it as a broken gate. The reverse trap exists too: bare
+  `node --test <glob>` prints `fail 0` when the glob matched nothing, so `EXPECT: fail 0` passes on zero tests.
+  Wrap it in a small script that also requires a non-zero test count, and match that script's own OK line.
 - **Assert the specific token, never a generic failure flag.** If a gate needs a refusal with a particular error
   code, matching any 4xx with `rejected: true` lets a different validation layer's refusal print a pass without
   the fence under test ever being reached.
